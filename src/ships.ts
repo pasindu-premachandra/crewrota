@@ -47,7 +47,7 @@ function startsWith(file: string, prefix: string): boolean {
 
 // New files are copied; the same file is skipped; a transcript that only grew in the source is brought up to date;
 // a file changed on both sides arrives beside it as <name>.incoming-<n><ext>, so nothing is overwritten.
-function importFolder(from: string, to: string, count: ImportCount): void {
+export function importFolder(from: string, to: string, count: ImportCount): void {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
     const source = path.join(from, entry.name);

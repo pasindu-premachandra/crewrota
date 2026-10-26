@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isAccessible } from '@clack/core';
-import { cancel, intro, outro } from '@clack/prompts';
+import { cancel, intro, isCancel, outro, password } from '@clack/prompts';
+import { backup, restore } from './backup.js';
 import { type RateLimits, authStatus, probeRateLimits, readRateLimits, startClaude } from './claude.js';
 import { type Choice, type Config, loadConfig, rememberedChoice, saveConfig } from './config.js';
 import { runDoctor } from './doctor.js';
@@ -74,6 +75,10 @@ Usage:
   crew ship mcp remove <ship> <name>           remove one
   crew ship import <ship> --from <folder>      copy history, memory and session folders into the ship (a ccs context
                                                group folder works); run it again to add what is new
+  crew backup [--to <folder>] [--password]     one zip of the ships, member list, settings and ship MCP servers; never a login
+  crew restore <zip> [--map <old>=<new>]... [--password]
+                                               bring a backup back: ships merged, members re-created, project folders
+                                               renamed to this machine's paths; then crew login <member> for each
   crew config permissions on|off               start sessions with --dangerously-skip-permissions or not
   crew config refresh on|off                   read every member's usage with quota-axi as the menu opens (no message; on by default)
   crew config lavish on|off                    add the plugin's Lavish rule at every session start, or stop that (on by default)
@@ -618,6 +623,51 @@ async function ship(args: string[]): Promise<number> {
   usage('crew ship create|list|rename|delete|join|leave|mcp|import (see crew --help)');
 }
 
+// Asked in the terminal, hidden; without one, read from CREWROTA_BACKUP_PASSWORD. Never printed or saved.
+async function askPassword(twice: boolean): Promise<string> {
+  if (!interactive()) {
+    const fromEnv = process.env.CREWROTA_BACKUP_PASSWORD;
+    if (!fromEnv) throw new Error('--password needs a terminal, or the password in CREWROTA_BACKUP_PASSWORD.');
+    return fromEnv;
+  }
+  const validate = (value: string | undefined) => (value ? undefined : 'Type a password');
+  const first = await password({ message: 'Password for the backup', validate });
+  if (isCancel(first)) throw new Error('No password given. Nothing changed.');
+  if (!twice) return first;
+  const again = await password({ message: 'The same password again', validate });
+  if (isCancel(again)) throw new Error('No password given. Nothing changed.');
+  if (again !== first) throw new Error('The two passwords differ. Nothing written.');
+  return first;
+}
+
+async function backupCommand(args: string[]): Promise<number> {
+  const { positional, flags } = parseArgs(args, ['--to'], ['--password']);
+  if (positional.length > 0) usage('crew backup [--to <folder>] [--password]');
+  const secret = flags['--password'] ? await askPassword(true) : undefined;
+  backup(loadConfig(), { to: stringFlag(flags['--to']), password: secret, version: version() });
+  return 0;
+}
+
+async function restoreCommand(args: string[]): Promise<number> {
+  const maps: [string, string][] = [];
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== '--map') {
+      rest.push(args[i]);
+      continue;
+    }
+    const value = args[++i] ?? '';
+    const cut = value.indexOf('=');
+    if (cut < 1 || cut === value.length - 1) throw new Error('--map takes <old folder>=<new folder>.');
+    maps.push([value.slice(0, cut), value.slice(cut + 1)]);
+  }
+  const { positional, flags } = parseArgs(rest, [], ['--password']);
+  if (positional.length !== 1) usage('crew restore <zip> [--map <old>=<new>]... [--password]');
+  const secret = flags['--password'] ? await askPassword(false) : undefined;
+  restore(loadConfig(), positional[0], { maps, password: secret });
+  return 0;
+}
+
 function configCommand(args: string[]): number {
   const config = loadConfig();
   if (args[0] === 'permissions' && (args[1] === 'on' || args[1] === 'off') && args.length === 2) {
@@ -736,6 +786,8 @@ async function main(args: string[]): Promise<number> {
   if (command === 'rename') return rename(rest);
   if (command === 'drop' || command === 'remove') return drop(rest);
   if (command === 'ship') return ship(rest);
+  if (command === 'backup') return backupCommand(rest);
+  if (command === 'restore') return restoreCommand(rest);
   if (command === 'config') return configCommand(rest);
   if (command === 'doctor') return doctor(rest);
   if (command === 'setup') return setup(rest);

@@ -31,7 +31,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.1.1).
+Status: Pre-release (0.2.0).
 
 ## What it looks like
 
@@ -111,6 +111,8 @@ To install from source instead, use the install scripts in `scripts/`; the quick
 | `crew ship delete <ship> [--force] [--yes]` | Move a ship's folder to `removed/` (refuses while members are aboard unless `--force`) |
 | `crew ship join <member> <ship>` | Share `<member>`'s history through `<ship>`; its existing history is copied in |
 | `crew ship leave <member>` | Make `<member>` isolated again; the ship keeps its files |
+| `crew backup [--to <folder>] [--password]` | One zip of every ship (history, memory, session folders, MCP servers), the member list and the remembered settings; never a login |
+| `crew restore <zip> [--map <old>=<new>]... [--password]` | Bring a backup back: ships merged in, missing members re-created, project folders renamed to this machine's paths; then `crew login <member>` for each |
 | `crew config permissions on\|off` | Start sessions with `--dangerously-skip-permissions`, or not |
 | `crew config refresh on\|off` | Read every member's usage with quota-axi as the menu opens; no message is sent (on by default) |
 | `crew config lavish on\|off` | Add the plugin's Lavish rule at every session start, or stop that (on by default) |
@@ -170,6 +172,21 @@ Run these in your main Claude Code, not inside a member: every member links your
 
 Set `CREWROTA_HOME` to keep members and ships somewhere else.
 crewrota never deletes a member or a ship: `remove` and `ship delete` move the folder to `removed/`, and you delete it yourself when you are sure.
+
+## Moving to a new machine
+
+```
+crew backup --password
+crew restore crewrota-backup-20261026-0905.zip --password
+```
+
+`crew backup` writes one zip in the current folder (or `--to <folder>`): every ship with its history, memory, session folders and MCP servers, the member list with each member's ship, model and effort, and the remembered settings.
+Logins are never in it: after `crew restore`, sign each member in again with `crew login <member>`, and the restore prints that line for every member it made.
+`crew restore` merges the ships into the ones you have, re-creates the members you are missing, and leaves your existing members and settings alone.
+Claude Code files each session under its project's full folder path, so the restore renames those folders when your home folder differs on the new machine.
+For projects that moved elsewhere, add `--map <old folder>=<new folder>`, for example `--map E:\Projects=D:\work`; it renames that folder and every folder below it, and you can repeat it.
+The zip holds your transcripts and the ships' MCP keys in plain text, so use `--password` to encrypt it with AES-256; without a terminal crewrota reads the password from `CREWROTA_BACKUP_PASSWORD`.
+The zip is written and read by bsdtar, which Windows 10 and 11 and macOS already have; on Linux install `libarchive-tools`.
 
 ## Your main setup in every member
 

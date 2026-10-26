@@ -13,6 +13,7 @@ src/members.ts    the creation workflow, use, add, rename, remove
 src/menu.ts       the one-screen crew menu (@clack/core), crew quota's lines, and the @clack/prompts questions
 src/launch.ts     builds the claude argv, heals links, starts claude in the member folder
 src/ships.ts      ships: join, heal, leave, rename
+src/backup.ts     crew backup and crew restore: one zip through bsdtar, the project slug and remap rule, the tar runner
 src/shared.ts     shared items from the main ~/.claude: links, copies, mcpServers
 src/links.ts      link helpers, folder moves to removed/, session file counts
 src/rows.ts       member rows for the menu and list, quota.json readings
@@ -61,6 +62,7 @@ Try the CLI without real accounts: set `CREWROTA_CLAUDE=src/test/fixtures/fake-c
 - Every member links `skills`, `agents`, `commands` and the `cache`, `data` and `marketplaces` of `plugins/` to `~/.claude`, and gets copies of `settings.json`, `CLAUDE.md` and the plugin lists; `known_marketplaces.json` is copied with its paths pointed at the member, as ccs does.
 - Email and organisation come from `oauthAccount.emailAddress`, `organizationName` and `organizationUuid` in the member's `.claude.json`.
 - Settings are keyed by member name.
+- Backups: `crew backup` and `crew restore` run bsdtar, never the `tar` on PATH on Windows (Git Bash's is GNU tar, which cannot write a zip): `%SystemRoot%\System32\tar.exe` there, else `bsdtar` or a `tar` whose `--version` names bsdtar (Linux: `libarchive-tools`); `CREWROTA_TAR` points at another. A password adds AES-256 zip encryption. Logins and member folders are never in a backup.
 
 ## Hard rules
 
