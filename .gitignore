@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env*
+coverage/
+.claude/tasks/
+
+# the website lives outside this repo (E:\Projects\startup\crewrota-site); never commit a copy here
+crewrota-site/
+site/

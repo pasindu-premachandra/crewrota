@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks a push when a file holds a term from the private denylist.
+exec node scripts/check-private.mjs

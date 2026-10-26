@@ -1,0 +1,30 @@
+{
+  "name": "crewrota",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Run Claude Code as one of your crew members: one Claude login per config folder, shared history through ships, remembered model and effort.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "crewrota": "dist/cli.js",
+    "crw": "dist/cli.js",
+    "crew": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "check:private": "node scripts/check-private.mjs"
+  },
+  "dependencies": {
+    "@clack/core": "1.5.1",
+    "@clack/prompts": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
+  }
+}
