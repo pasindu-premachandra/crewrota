@@ -5,6 +5,8 @@
   "author": {
     "name": "Pasindu Premachandra"
   },
+  "homepage": "https://github.com/pasindu-premachandra/crewrota",
+  "repository": "https://github.com/pasindu-premachandra/crewrota",
   "license": "MIT",
   "keywords": ["crewrota", "firstmate", "lavish", "worktrees", "delegation"]
 }

@@ -10,7 +10,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release. Private while it is tried for a week.
+Status: Pre-release (0.1.0).
 
 ## What it looks like
 
@@ -38,6 +38,24 @@ The screenshots use a demo crew with example names, accounts and usage.
 
 - Windows: [docs/windows/quickstart.md](docs/windows/quickstart.md)
 - macOS (beta: not yet run on a real Mac): [docs/macos/quickstart.md](docs/macos/quickstart.md)
+
+## Install
+
+crewrota needs Node 22 or newer and Claude Code.
+
+```
+npm install -g crewrota
+```
+
+Then add the plugin:
+
+```
+claude plugin marketplace add pasindu-premachandra/crewrota
+claude plugin install crewrota@crewrota
+```
+
+Run these in your main Claude Code, not inside a member: every member links your main plugin cache and copies its plugin lists at launch.
+To install from source instead, use the install scripts in `scripts/`; the quickstarts have the details.
 
 ## Commands
 
@@ -109,7 +127,7 @@ It also asks once whether lavish-axi may send its usage telemetry; a no is remem
 The repo is also a Claude Code plugin marketplace with one plugin, `crewrota`:
 
 ```
-claude plugin marketplace add <owner>/crewrota
+claude plugin marketplace add pasindu-premachandra/crewrota
 claude plugin install crewrota@crewrota
 ```
 

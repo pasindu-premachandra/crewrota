@@ -1,9 +1,24 @@
 {
   "name": "crewrota",
   "version": "0.1.0",
-  "private": true,
   "description": "Run Claude Code as one of your crew members: one Claude login per config folder, shared history through ships, remembered model and effort.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "cli",
+    "accounts",
+    "crew"
+  ],
+  "homepage": "https://github.com/pasindu-premachandra/crewrota#readme",
+  "bugs": {
+    "url": "https://github.com/pasindu-premachandra/crewrota/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pasindu-premachandra/crewrota.git"
+  },
   "license": "MIT",
+  "author": "Pasindu Premachandra",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -13,11 +28,19 @@
     "crw": "dist/cli.js",
     "crew": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "!dist/test",
+    "templates",
+    "widget",
+    "NOTICE"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
-    "check:private": "node scripts/check-private.mjs"
+    "check:private": "node scripts/check-private.mjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@clack/core": "1.5.1",

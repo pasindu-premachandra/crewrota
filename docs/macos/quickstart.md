@@ -23,16 +23,22 @@ Download it from https://nodejs.org/en/download, then open a new Terminal window
 
 ## 3. Install crewrota
 
-For now crewrota is installed from its repo, not from npm. In the crewrota folder:
+```bash
+npm install -g crewrota
+```
+
+`crew`, `crw` and `crewrota` are then known commands in every terminal, all the same command.
+Run it again to update. Remove it with `npm uninstall --global crewrota`.
+Check the setup with `crew doctor`.
+
+From source: in the crewrota folder:
 
 ```bash
 sh scripts/install.sh
 ```
 
 It checks for Node 22, builds crewrota, packs it the way it would be published, and installs that package globally.
-`crew`, `crw` and `crewrota` are then known commands in every terminal, all the same command.
-Run the script again after pulling changes to update. Remove it with `npm uninstall --global crewrota`.
-Check the setup with `crew doctor`.
+Run the script again after pulling changes to update.
 
 ## 4. Add your crew members
 
@@ -76,7 +82,7 @@ It also asks whether lavish-axi may send usage telemetry, and checks `gh auth st
 Then add the plugin in your main Claude Code (not inside a member; members pick it up at their next launch):
 
 ```bash
-claude plugin marketplace add <owner>/crewrota
+claude plugin marketplace add pasindu-premachandra/crewrota
 claude plugin install crewrota@crewrota
 ```
 
