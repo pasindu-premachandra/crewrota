@@ -5,7 +5,7 @@ import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { CANCEL_SYMBOL } from '@clack/prompts';
 import type { Config } from '../config.js';
-import { ADD_MEMBER, TYPE_A_NAME, askMemberName, askSkipPermissions, crewMenu, pickChoice, pickMember, quotaLines } from '../menu.js';
+import { ADD_MEMBER, TYPE_A_NAME, askMemberName, askSkipPermissions, crewMenu, menubarColour, menubarLines, pickChoice, pickMember, quotaLines } from '../menu.js';
 import { memberDir } from '../paths.js';
 import { fakeMember, isolate, scriptedUi } from './helpers.js';
 
@@ -131,6 +131,30 @@ test('crew quota lists every member with its bars and no marker', () => {
   assert.match(lines[2], /member +5h +week/);
   assert.match(lines[3], /^ {5}home +no reading yet$/);
   assert.match(lines[4], /^ {5}work +▖{14} +42% +▖{14} +18%$/);
+});
+
+test('crew quota --format menubar puts the current member in the bar text, then every member and two actions', () => {
+  const lines = menubarLines(config);
+  assert.deepEqual(lines.slice(0, 7), ['crew 42%', '---', 'home', 'no reading yet', 'work | font=Helvetica-Bold', '5h 42% | color=#3fb68b', 'week 18% | color=#3fb68b']);
+  assert.equal(lines[7], '---');
+  assert.match(lines[8], /^Open the crew menu \| shell=".+" param1=".+cli\.js" terminal=true$/);
+  assert.equal(lines[9], 'Refresh | refresh=true');
+  assert.equal(lines.length, 10);
+});
+
+test('the menu bar shows reset times and colours each window with the widget\'s rule', () => {
+  const now = Date.now();
+  const others: Config = { skipPermissions: null, members: {} };
+  fakeMember(others, 'mac');
+  const at = (seconds: number) => Math.floor(now / 1000) + seconds;
+  fs.writeFileSync(path.join(memberDir('mac'), 'quota.json'), JSON.stringify({ ts: at(-60), five_hour_pct: 71, seven_day_pct: 92, five_hour_resets_at: at(3600), seven_day_resets_at: at(3 * 86400) }));
+  const lines = menubarLines(others, now);
+  assert.equal(lines[0], 'crew');
+  assert.equal(lines[2], 'mac');
+  assert.match(lines[3], /^5h 71% {2}resets \d\d:\d\d \| color=#e0a43a$/);
+  assert.match(lines[4], /^week 92% {2}resets (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d\d:\d\d \| color=#e5534b$/);
+  assert.deepEqual([59, 60, 79, 80].map(menubarColour), ['#3fb68b', '#e0a43a', '#e0a43a', '#e5534b']);
+  assert.deepEqual(menubarLines({ skipPermissions: null, members: {} }).slice(0, 3), ['crew', '---', 'No crew members yet']);
 });
 
 test('the skip-permissions question defaults to no and reports a cancel as null', async () => {

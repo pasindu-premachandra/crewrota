@@ -13,6 +13,8 @@ export interface Member {
 export interface Config {
   skipPermissions: boolean | null;
   refreshReadings?: boolean; // probe every member's usage when the menu opens; on unless set to false
+  lavishRule?: boolean; // the plugin's SessionStart rule; on unless set to false
+  lavishTelemetry?: boolean; // answered in crew setup; false passes LAVISH_AXI_TELEMETRY=0 at launch
   lastModel?: string;
   lastEffort?: string;
   current?: string;
@@ -31,6 +33,8 @@ export function loadConfig(file = configFile()): Config {
   return {
     skipPermissions: typeof data.skipPermissions === 'boolean' ? data.skipPermissions : null,
     ...(data.refreshReadings === false ? { refreshReadings: false } : {}),
+    ...(data.lavishRule === false ? { lavishRule: false } : {}),
+    ...(typeof data.lavishTelemetry === 'boolean' ? { lavishTelemetry: data.lavishTelemetry } : {}),
     lastModel: data.lastModel,
     lastEffort: data.lastEffort,
     current: data.current,

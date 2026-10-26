@@ -60,3 +60,20 @@ test('switching keeps the previous member', () => {
   assert.equal(config.current, 'home');
   assert.equal(config.previous, 'work');
 });
+
+test('the Lavish rule and telemetry answers survive a save, and stay unset until given', () => {
+  const config = loadConfig();
+  assert.equal('lavishRule' in config, false);
+  assert.equal('lavishTelemetry' in config, false);
+  config.lavishRule = false;
+  config.lavishTelemetry = false;
+  saveConfig(config);
+  const reloaded = loadConfig();
+  assert.equal(reloaded.lavishRule, false);
+  assert.equal(reloaded.lavishTelemetry, false);
+  reloaded.lavishRule = true;
+  reloaded.lavishTelemetry = true;
+  saveConfig(reloaded);
+  assert.equal('lavishRule' in loadConfig(), false);
+  assert.equal(loadConfig().lavishTelemetry, true);
+});

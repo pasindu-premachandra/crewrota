@@ -8,7 +8,7 @@ import { ensureStatusLine } from './statusline.js';
 
 export interface LaunchDeps {
   askSkipPermissions: () => Promise<boolean | null>;
-  start: (args: string[], dir: string, onSpawn: () => void) => Promise<number>;
+  start: (args: string[], dir: string, onSpawn: () => void, extraEnv: NodeJS.ProcessEnv) => Promise<number>;
 }
 
 export function launchArgs(choice: Choice, skipPermissions: boolean, extra: string[]): string[] {
@@ -38,9 +38,10 @@ export async function launch(
   const ship = config.members[member].ship;
   for (const note of syncSharedItems(dir, ship ? readShipMcp(ship) : mainMcpServers())) console.log(say('info', note));
   ensureStatusLine(dir);
+  const extraEnv = config.lavishTelemetry === false ? { LAVISH_AXI_TELEMETRY: '0' } : {};
   return deps.start(launchArgs(choice, skipPermissions, extra), dir, () => {
     config.skipPermissions = skipPermissions;
     recordChoice(config, member, choice);
     saveConfig(config);
-  });
+  }, extraEnv);
 }

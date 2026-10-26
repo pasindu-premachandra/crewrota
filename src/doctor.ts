@@ -12,6 +12,7 @@ export interface Check {
   ok: boolean;
   detail: string;
   fix?: string;
+  optional?: boolean; // reported, never fails the doctor
 }
 
 const installClaude: Record<string, string> = {

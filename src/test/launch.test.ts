@@ -134,3 +134,19 @@ test("a member on a ship launches with the ship's MCP servers, not the main ones
   const member = JSON.parse(fs.readFileSync(path.join(memberDir('work'), '.claude.json'), 'utf8'));
   assert.deepEqual(member.mcpServers, { shiponly: { type: 'http', url: 'https://example.com/mcp' } });
 });
+
+test('a no to Lavish telemetry launches claude with LAVISH_AXI_TELEMETRY=0, and nothing extra otherwise', async () => {
+  const envs: NodeJS.ProcessEnv[] = [];
+  const deps: LaunchDeps = {
+    askSkipPermissions: async () => false,
+    start: async (_args, _dir, onSpawn, extraEnv) => {
+      envs.push(extraEnv);
+      onSpawn();
+      return 0;
+    },
+  };
+  await launch('work', { model: 'default', effort: 'default' }, [], { ...loadConfig(), lavishTelemetry: false }, deps);
+  await launch('work', { model: 'default', effort: 'default' }, [], { ...loadConfig(), lavishTelemetry: true }, deps);
+  await launch('work', { model: 'default', effort: 'default' }, [], loadConfig(), deps);
+  assert.deepEqual(envs, [{ LAVISH_AXI_TELEMETRY: '0' }, {}, {}]);
+});

@@ -19,10 +19,16 @@ src/rows.ts       member rows for the menu and list, quota.json readings
 src/statusline.ts the status line given to members without one: writes quota.json, prints the main setup's layout (model, context, branch, 5h, 7d, reset, folder, crew member)
 src/widget.ts     crew widget: opens widget/crewrota-widget.pyw with pythonw, asks it to close through widget.close, the Startup shortcut
 widget/           the quota widget (Python + Tk), shipped in the npm package
+templates/dot-claude/  the root .claude/ that crew init writes (crewrota.json marks the root)
+.claude-plugin/   marketplace.json: one plugin, crewrota, from ./plugin
+plugin/           the Claude Code plugin: .claude-plugin/plugin.json, skills/firstmate/ (SKILL.md, brief.md, readme-template.md, board.js), hooks/ (hooks.json, lavish-rule.mjs)
+widget/crewrota.1m.sh  the SwiftBar/xbar menu bar plugin: runs crew quota --format menubar (macOS, beta)
 src/say.ts        the site palette (painter, paint, paintError: 24-bit, named-colour fallback, plain when piped) and [i] / [!] / [OK] tags
 src/identity.ts   email and organisation from a member's .claude.json
-src/claude.ts     the only place that runs claude
+src/claude.ts     the only place that runs claude and quota-axi
 src/doctor.ts     setup checks with per-OS fixes
+src/setup.ts      crew setup: the default tools from upstream, one list, one yes, one injectable runner; crew doctor's tool lines
+src/init.ts       crew init: writes templates/dot-claude/ into the current folder's .claude/, never overwriting a file
 src/config.ts     the remembered config (APPDATA or XDG_CONFIG_HOME, crewrota/config.json)
 src/paths.ts      config, crewrota home, member, ship and main-setup paths
 src/names.ts      member and ship name rule
@@ -46,7 +52,9 @@ Try the CLI without real accounts: set `CREWROTA_CLAUDE=src/test/fixtures/fake-c
 
 ## How it uses Claude Code
 
-- Status line: a member whose `settings.json` has no `statusLine` gets `crewrota statusline` at launch, which saves the session's `rate_limits` to `quota.json` in the member folder.
+- Usage: the menu and `crew quota` run `npx -y quota-axi --provider claude --json` once per member, side by side, with `CLAUDE_CONFIG_DIR` set to the member folder and `QUOTA_AXI_CLAUDE_PROFILES` removed (several folders in one call read idle members as `credentials_expired`), and save a `fresh` reading to `quota.json`; `CREWROTA_QUOTA_AXI` points at another quota-axi, such as the tests' fake.
+- Status line: a member whose `settings.json` has no `statusLine` gets `crewrota statusline` at launch, which saves the session's `rate_limits` to `quota.json` in the member folder; it is the fallback when quota-axi gives no reading.
+- `crew warmup` is the only command that sends a message: one short Haiku print run per member (`probeRateLimits`), which starts its 5-hour window if none is running.
 - Calls: `claude --version`, plain `claude` for a new member's login (pastes work there; `claude auth login` did not take a pasted code in Git Bash inside VS Code, 26 Oct 2026), `claude auth login [--email <e>] [--sso]`, `claude auth logout`, `claude auth status --json`, and the session launch `claude [--model] [--effort] [--dangerously-skip-permissions] [args]`, each with `CLAUDE_CONFIG_DIR` set to the member folder (except `--version`).
 - A member is `<crewrota home>/members/<member>`; the crewrota home is `CREWROTA_HOME`, else `~/.crewrota`.
 - A ship is `<crewrota home>/ships/<ship>/` with `projects`, `todos`, `file-history`, `session-env` and `shell-snapshots` (`SHIP_FOLDERS`); each member on it links those five to the ship with a junction (Windows) or symlink, and its `mcp.json` (keys included) is copied into each member's `.claude.json` at launch.
@@ -58,7 +66,7 @@ Try the CLI without real accounts: set `CREWROTA_CLAUDE=src/test/fixtures/fake-c
 
 - Never read, copy or print a credential file: any `.credentials.json`, `.env*`.
 - Never write to the main `~/.claude` or `~/.claude.json`; they are read only, for the shared items.
-- Tests never call the real `claude`. Use the fake (`CREWROTA_CLAUDE`) or an injected runner, and call `isolate()` from `src/test/helpers.ts` so HOME, USERPROFILE, APPDATA, XDG_CONFIG_HOME and CREWROTA_HOME point at temp folders.
+- Tests never call the real `claude` or the real quota-axi. Use the fakes (`CREWROTA_CLAUDE`, `CREWROTA_QUOTA_AXI`) or an injected runner, and call `isolate()` from `src/test/helpers.ts` so HOME, USERPROFILE, APPDATA, XDG_CONFIG_HOME and CREWROTA_HOME point at temp folders.
 - Never a recursive delete through a link. Members and ships are moved to `removed/` after their links are unlinked; only a folder crewrota made moments ago in a failed creation, with no link in it, is deleted.
 - No em dash and no en dash anywhere; plain hyphens.
 - Comments only where the code is not obvious, one short line.

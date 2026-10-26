@@ -8,9 +8,10 @@ import { memberDir } from '../paths.js';
 
 export const fixturesDir = fileURLToPath(new URL('../../src/test/fixtures/', import.meta.url));
 export const fakeClaude = path.join(fixturesDir, 'fake-claude.mjs');
+export const fakeQuotaAxi = path.join(fixturesDir, 'fake-quota-axi.mjs');
 export const cliPath = fileURLToPath(new URL('../cli.js', import.meta.url));
 
-// Points every home and config variable at a fresh temp folder, and claude at the fake.
+// Points every home and config variable at a fresh temp folder, and claude and quota-axi at the fakes.
 export function isolate(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrota-test-'));
   const dirs = {
@@ -26,8 +27,9 @@ export function isolate(): string {
   }
   process.env.CREWROTA_HOME = path.join(root, 'crew-home');
   process.env.CREWROTA_CLAUDE = fakeClaude;
+  process.env.CREWROTA_QUOTA_AXI = fakeQuotaAxi;
   for (const name of Object.keys(process.env)) {
-    if (['CLAUDE_CONFIG_DIR', 'CREW_MEMBER', 'CREWROTA_DENYLIST'].includes(name) || name.startsWith('FAKE_CLAUDE_')) delete process.env[name];
+    if (['CLAUDE_CONFIG_DIR', 'CREW_MEMBER', 'CREWROTA_DENYLIST', 'QUOTA_AXI_CLAUDE_PROFILES'].includes(name) || name.startsWith('FAKE_CLAUDE_') || name.startsWith('FAKE_QUOTA_')) delete process.env[name];
   }
   return root;
 }

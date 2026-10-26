@@ -1,0 +1,14 @@
+{
+  "name": "crewrota",
+  "description": "crewrota's Claude Code plugin: firstmate and the Lavish rule",
+  "owner": {
+    "name": "Pasindu Premachandra"
+  },
+  "plugins": [
+    {
+      "name": "crewrota",
+      "source": "./plugin",
+      "description": "firstmate (one task to 1 or N crew members, with an agents board) and the Lavish rule at session start"
+    }
+  ]
+}

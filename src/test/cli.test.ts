@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { loadConfig, saveConfig } from '../config.js';
 import { linkState } from '../links.js';
 import { memberDir, removedDir, shipDir, shipProjectsDir } from '../paths.js';
+import { readQuota } from '../rows.js';
 import { cliPath, fakeMember, isolate, readLog } from './helpers.js';
 
 const root = isolate();
@@ -27,7 +28,8 @@ test('--version prints the package version and --help lists the commands', () =>
   assert.equal(cli(['--version']).out.trim(), '0.1.0');
   const help = cli(['--help']).out;
   for (const command of ['crew use <member>', 'crew use -', 'crew add <member>', 'crew run [<member>]', 'crew list', 'crew whoami', 'crew current',
-    'crew login <member>', 'crew rename', 'crew drop', 'crew ship create', 'crew ship join', 'crew ship leave', 'config permissions on|off', 'crew doctor']) {
+    'crew login <member>', 'crew rename', 'crew drop', 'crew ship create', 'crew ship join', 'crew ship leave', 'config permissions on|off', 'crew doctor',
+    'crew quota', 'crew warmup [<member>...]', 'crew setup [--yes] [--with-hooks]', 'crew init', 'config lavish on|off']) {
     assert.ok(help.includes(command), command);
   }
   assert.doesNotMatch(help, /cswap|claude-swap|seat/);
@@ -267,35 +269,119 @@ test('config show lists the remembered settings', () => {
   assert.match(out, /job: model opus, effort high, isolated$/m);
 });
 
-test('the usage check is on by default; config refresh off stops it and on says what it sends', () => {
+test('the usage check is on by default; config refresh off stops it and on says it sends no message', () => {
   assert.match(cli(['config', 'show']).out, /Usage check when the menu opens: on/);
   cli(['config', 'refresh', 'off']);
   assert.equal(loadConfig().refreshReadings, false);
   assert.match(cli(['config', 'show']).out, /Usage check when the menu opens: off/);
   const on = cli(['config', 'refresh', 'on']);
   assert.equal(on.code, 0);
-  assert.match(on.out, /one short message \(Haiku\) as each member/);
-  assert.match(on.out, /starts one/);
+  assert.match(on.out, /reads every member's usage with quota-axi/);
+  assert.match(on.out, /no message is sent/);
   assert.match(cli(['config', 'show']).out, /Usage check when the menu opens: on/);
   assert.match(cli(['config', 'refresh']).err, /config refresh on\|off/);
 });
 
-test('quota checks every member\'s usage first, then shows each one as bars; with refresh off it sends nothing', () => {
-  const probes = () => readLog(log).filter((call) => call.args.includes('-p')).length;
-  const before = probes();
-  const { code, out } = cli(['quota']);
+const probes = () => readLog(log).filter((call) => call.args.includes('-p'));
+
+test('quota reads every member with quota-axi in its own folder, sends no message, then shows the bars; refresh off reads nothing', () => {
+  const quotaLog = path.join(root, 'fake-quota-axi.log');
+  const before = probes().length;
+  const { code, out } = cli(['quota'], { FAKE_QUOTA_LOG: quotaLog, QUOTA_AXI_CLAUDE_PROFILES: 'x;y' });
   const names = Object.keys(loadConfig().members);
   assert.equal(code, 0);
-  assert.equal(probes(), before + names.length);
+  assert.equal(probes().length, before);
+  assert.deepEqual(readLog(quotaLog).map((call) => call.dir).sort(), names.map((name) => memberDir(name)).sort());
+  for (const call of readLog(quotaLog) as { profiles?: string | null }[]) assert.equal(call.profiles, null);
   assert.match(out, /crewrota {2}crew quota/);
-  for (const name of names) assert.match(out, new RegExp(`${name} +▖+ +25% +▖+ +40%`));
+  for (const name of names) assert.match(out, new RegExp(`${name} +▖+ +30% +▖+ +55%`));
 
   cli(['config', 'refresh', 'off']);
-  const offBefore = probes();
-  assert.match(cli(['quota']).out, /25%/);
-  assert.equal(probes(), offBefore);
+  const reads = readLog(quotaLog).length;
+  assert.match(cli(['quota'], { FAKE_QUOTA_LOG: quotaLog, FAKE_QUOTA_FIVE: '90' }).out, /30%/);
+  assert.equal(readLog(quotaLog).length, reads);
   cli(['config', 'refresh', 'on']);
   assert.match(cli(['quota', 'extra']).err, /Usage: crew quota/);
+});
+
+test('a member whose quota-axi read fails or is not fresh keeps its last reading', () => {
+  for (const env of [{ FAKE_QUOTA_STATUS: 'stale', FAKE_QUOTA_FIVE: '90' }, { FAKE_QUOTA_EXIT: '1' }] as Record<string, string>[]) {
+    const { code, out } = cli(['quota'], env);
+    assert.equal(code, 0);
+    assert.match(out, /home +▖+ +30% +▖+ +55%/);
+  }
+});
+
+test('warmup says what it does, sends each member one Haiku message, then shows the bars', () => {
+  const before = probes().length;
+  const { code, out } = cli(['warmup'], { FAKE_CLAUDE_FIVE: '7' });
+  const names = Object.keys(loadConfig().members);
+  assert.equal(code, 0);
+  assert.match(out, /Each member gets one short message \(Haiku\), which starts its 5-hour window if none is running\./);
+  const sent = probes().slice(before);
+  assert.deepEqual(sent.map((call) => call.dir).sort(), names.map((name) => memberDir(name)).sort());
+  for (const call of sent) assert.ok(call.args.includes('haiku'));
+  for (const name of names) assert.match(out, new RegExp(`${name} +▖* +7% +▖+ +40%`));
+
+  const named = probes().length;
+  assert.equal(cli(['warmup', 'home']).code, 0);
+  assert.deepEqual(probes().slice(named).map((call) => call.dir), [memberDir('home')]);
+  assert.match(cli(['warmup', 'nobody']).err, /Crew member nobody doesn't exist/);
+  assert.equal(probes().length, named + 1);
+});
+
+test('a wrong ship mcp call prints every form of add, as --help does', () => {
+  const { code, err } = cli(['ship', 'mcp', 'frob', 'keys']);
+  assert.equal(code, 1);
+  for (const form of ['crew ship mcp list <ship>', '--url <url> [--header "Name: value"]', '[--env KEY=value] -- <command> [args]', '--from <.claude.json>', 'crew ship mcp remove <ship> <name>']) {
+    assert.ok(err.includes(form), form);
+  }
+});
+
+test('quota --format menubar reads each member\'s last reading and never checks usage, even with refresh on', () => {
+  const probes = () => readLog(log).filter((call) => call.args.includes('-p')).length;
+  const before = probes();
+  const config = loadConfig();
+  assert.notEqual(config.refreshReadings, false);
+  const { code, out } = cli(['quota', '--format', 'menubar']);
+  assert.equal(code, 0);
+  assert.equal(probes(), before);
+  const lines = out.trimEnd().split(/\r?\n/);
+  const current = config.current ? readQuota(memberDir(config.current))?.fiveHour : null;
+  assert.deepEqual(lines.slice(0, 2), [current === null || current === undefined ? 'crew' : `crew ${current}%`, '---']);
+  for (const name of Object.keys(config.members)) assert.ok(lines.includes(name === config.current ? `${name} | font=Helvetica-Bold` : name), name);
+  assert.equal(lines.at(-1), 'Refresh | refresh=true');
+  assert.match(cli(['quota', '--format', 'json']).err, /Usage: crew quota \[--format menubar\]/);
+  assert.match(cli(['quota', '--format']).err, /Usage: crew quota/);
+});
+
+test('the Lavish rule is on by default; config lavish off and on set it, and config show says so', () => {
+  assert.match(cli(['config', 'show']).out, /Lavish rule at session start: on/);
+  assert.match(cli(['config', 'show']).out, /Lavish telemetry: not asked yet \(crew setup asks\)/);
+  const off = cli(['config', 'lavish', 'off']);
+  assert.equal(off.code, 0);
+  assert.match(off.out, /without the Lavish rule/);
+  assert.equal(loadConfig().lavishRule, false);
+  assert.match(cli(['config', 'show']).out, /Lavish rule at session start: off/);
+  cli(['config', 'lavish', 'on']);
+  assert.equal(loadConfig().lavishRule, undefined);
+  assert.match(cli(['config', 'show']).out, /Lavish rule at session start: on/);
+  assert.match(cli(['config', 'lavish']).err, /config lavish on\|off/);
+});
+
+test('setup without a terminal and without --yes lists the installs, then refuses with the hint', () => {
+  const { code, out, err } = cli(['setup']);
+  assert.equal(code, 1);
+  assert.match(out, /npx skills add kunchenguid\/lavish-axi --skill lavish -g/);
+  assert.match(err, /crew setup asks once before it installs anything, and that needs a terminal\. Run it in a terminal, or pass --yes/);
+  assert.match(cli(['setup', '--now']).err, /Unknown option: --now/);
+});
+
+test('doctor lists each default tool, and a missing one does not fail it', () => {
+  const { code, out } = cli(['doctor']);
+  assert.equal(code, 0);
+  assert.match(out, /miss {2}quota-axi skill: missing\r?\n {6}fix: npx skills add kunchenguid\/quota-axi --skill quota-axi -g \(or: crew setup\)/);
+  assert.match(out, /lavish-axi session hook \(opt-in\): missing/);
 });
 
 test('an unknown command or option fails with a clear message', () => {

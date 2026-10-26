@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { probeRateLimits, rateLimitsFrom } from '../claude.js';
+import { probeRateLimits, rateLimitsFrom, rateLimitsFromQuotaAxi, readRateLimits } from '../claude.js';
 import { readQuota } from '../rows.js';
 import { STATUS_COMMAND, ensureStatusLine, statusText, writeQuota } from '../statusline.js';
 import { cliPath, isolate, readLog } from './helpers.js';
@@ -144,6 +144,51 @@ test('a probe that gets no usage line gives nothing back', async () => {
   process.env.FAKE_CLAUDE_NO_LIMITS = '1';
   assert.equal(await probeRateLimits(folder('probe-none')), null);
   delete process.env.FAKE_CLAUDE_NO_LIMITS;
+});
+
+test('quota-axi\'s JSON is read as used percent and Unix reset times, and only a fresh reading counts', () => {
+  const report = (status: string) =>
+    JSON.stringify({
+      providers: [
+        {
+          provider: 'claude',
+          windows: [
+            { id: 'five_hour', percentRemaining: 82, resetsAt: '2026-03-15T20:10:48.000Z' },
+            { id: 'seven_day', percentRemaining: 64, resetsAt: '2026-03-20T17:59:45.600Z' },
+            { id: 'model:fable', percentRemaining: 71, resetsAt: '2026-03-20T08:25:12.000Z' },
+          ],
+          state: { status },
+        },
+      ],
+    });
+  assert.deepEqual(rateLimitsFromQuotaAxi(report('fresh')), {
+    five_hour: { used_percentage: 18, resets_at: Date.UTC(2026, 2, 15, 20, 10, 48) / 1000 },
+    seven_day: { used_percentage: 36, resets_at: Math.floor(Date.UTC(2026, 2, 20, 17, 59, 45) / 1000) },
+  });
+  assert.equal(rateLimitsFromQuotaAxi(report('stale')), null);
+  assert.equal(rateLimitsFromQuotaAxi(report('error')), null);
+  assert.equal(rateLimitsFromQuotaAxi('not json'), null);
+});
+
+test('the quota-axi read runs once in the member folder, without QUOTA_AXI_CLAUDE_PROFILES, and sends no message', async () => {
+  const log = path.join(root, 'quota-axi.log');
+  const claudeLog = path.join(root, 'quota-axi-claude.log');
+  Object.assign(process.env, { FAKE_QUOTA_LOG: log, FAKE_CLAUDE_LOG: claudeLog, FAKE_QUOTA_FIVE: '12', QUOTA_AXI_CLAUDE_PROFILES: 'a;b' });
+  const dir = folder('quota-axi');
+  const limits = await readRateLimits(dir);
+  for (const name of ['FAKE_QUOTA_LOG', 'FAKE_CLAUDE_LOG', 'FAKE_QUOTA_FIVE', 'QUOTA_AXI_CLAUDE_PROFILES']) delete process.env[name];
+  assert.deepEqual(limits, { five_hour: { used_percentage: 12, resets_at: 2000000000 }, seven_day: { used_percentage: 55, resets_at: 2000604800 } });
+  assert.deepEqual(JSON.parse(fs.readFileSync(log, 'utf8')), { args: ['--provider', 'claude', '--json'], dir, profiles: null });
+  assert.equal(fs.existsSync(claudeLog), false);
+});
+
+test('a quota-axi read that fails or is not fresh gives nothing back', async () => {
+  process.env.FAKE_QUOTA_STATUS = 'stale';
+  assert.equal(await readRateLimits(folder('quota-axi-stale')), null);
+  delete process.env.FAKE_QUOTA_STATUS;
+  process.env.FAKE_QUOTA_EXIT = '1';
+  assert.equal(await readRateLimits(folder('quota-axi-fail')), null);
+  delete process.env.FAKE_QUOTA_EXIT;
 });
 
 test('crew statusline saves the reading into CLAUDE_CONFIG_DIR and prints one line', () => {

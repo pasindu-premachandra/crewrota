@@ -122,11 +122,67 @@ export function probeRateLimits(dir: string, timeoutMs = 30_000): Promise<RateLi
   });
 }
 
+const QUOTA_AXI_ARGS = ['--provider', 'claude', '--json'];
+
+// CREWROTA_QUOTA_AXI points crewrota at another quota-axi, such as the fake one the tests use.
+export function quotaAxiCommand(): [string, string[]] {
+  const override = process.env.CREWROTA_QUOTA_AXI;
+  if (override) return /\.[cm]?js$/.test(override) ? [process.execPath, [override, ...QUOTA_AXI_ARGS]] : [override, QUOTA_AXI_ARGS];
+  const npx = ['npx', '-y', 'quota-axi', ...QUOTA_AXI_ARGS];
+  // npx on Windows is a .cmd shim, which only cmd.exe can start.
+  return process.platform === 'win32' ? ['cmd.exe', ['/d', '/c', ...npx]] : ['npx', npx.slice(1)];
+}
+
+// Reads quota-axi's JSON in the shape the status line gets as rate_limits; only a fresh reading counts.
+export function rateLimitsFromQuotaAxi(text: string): RateLimits | null {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const provider = data?.providers?.[0];
+  if (provider?.state?.status !== 'fresh' || !Array.isArray(provider.windows)) return null;
+  const limits: RateLimits = {};
+  for (const window of provider.windows) {
+    if ((window?.id === 'five_hour' || window?.id === 'seven_day') && typeof window.percentRemaining === 'number') {
+      limits[window.id as keyof RateLimits] = { used_percentage: 100 - window.percentRemaining, resets_at: Math.floor(Date.parse(window.resetsAt) / 1000) || 0 };
+    }
+  }
+  return Object.keys(limits).length > 0 ? limits : null;
+}
+
+// Reads one member's usage with quota-axi, which sends no message. One call per member with CLAUDE_CONFIG_DIR:
+// several folders in QUOTA_AXI_CLAUDE_PROFILES read idle members as credentials_expired.
+export function readRateLimits(dir: string, timeoutMs = 30_000): Promise<RateLimits | null> {
+  const [command, args] = quotaAxiCommand();
+  const env = memberEnv(dir);
+  delete env.QUOTA_AXI_CLAUDE_PROFILES;
+  return new Promise((resolve) => {
+    let done = false;
+    let output = '';
+    const child = spawn(command, args, { cwd: os.tmpdir(), env, stdio: ['ignore', 'pipe', 'ignore'] });
+    const finish = (limits: RateLimits | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      child.kill();
+      resolve(limits);
+    };
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    child.stdout.on('data', (chunk) => {
+      output += chunk;
+    });
+    child.on('error', () => finish(null));
+    child.on('close', () => finish(rateLimitsFromQuotaAxi(output)));
+  });
+}
+
 // Runs claude in the member's folder with the terminal handed over to it.
-export function startClaude(args: string[], dir: string, onSpawn: () => void = () => {}): Promise<number> {
+export function startClaude(args: string[], dir: string, onSpawn: () => void = () => {}, extraEnv: NodeJS.ProcessEnv = {}): Promise<number> {
   const [command, prefix] = claudeCommand();
   return new Promise((resolve) => {
-    const child = spawn(command, [...prefix, ...args], { stdio: 'inherit', env: memberEnv(dir) });
+    const child = spawn(command, [...prefix, ...args], { stdio: 'inherit', env: { ...memberEnv(dir), ...extraEnv } });
     const ignoreInterrupt = () => {}; // Ctrl+C belongs to Claude while it runs
     process.on('SIGINT', ignoreInterrupt);
     child.on('spawn', onSpawn);

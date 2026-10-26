@@ -1,10 +1,12 @@
+import path from 'node:path';
 import type { Readable, Writable } from 'node:stream';
 import { Prompt } from '@clack/core';
 import { confirm, isCancel, note, select, text } from '@clack/prompts';
 import { type Choice, type Config, rememberedChoice } from './config.js';
 import { nameRule, validName } from './names.js';
-import { formatRows, memberRows, type MemberRow } from './rows.js';
-import { painter, type Tone } from './say.js';
+import { memberDir, packageRoot } from './paths.js';
+import { formatRows, memberRows, readResets, type MemberRow } from './rows.js';
+import { PALETTE, painter, type Tone } from './say.js';
 import { listShips } from './ships.js';
 
 export interface Ui {
@@ -144,6 +146,43 @@ export function quotaLines(config: Config, output: Writable): string[] {
     columnHeader(paint, nameWidth),
     ...members.map((row) => `     ${paint('text', row.name.padEnd(nameWidth), true)}   ${memberUsage(paint, row)}`),
   ];
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function resetText(at: number | null, withDay: boolean): string {
+  if (at === null) return '';
+  const date = new Date(at * 1000);
+  const clock = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `  resets ${withDay ? `${WEEKDAYS[date.getDay()]} ` : ''}${clock}`;
+}
+
+export function menubarColour(pct: number): string {
+  return PALETTE[pct < 60 ? 'green' : pct < 80 ? 'amber' : 'red'][0]; // the widget's rule
+}
+
+function windowLine(label: string, pct: number | null, reset: string): string {
+  return pct === null ? `${label} -` : `${label} ${pct}%${reset} | color=${menubarColour(pct)}`;
+}
+
+// What crew quota --format menubar prints for SwiftBar and xbar: the bar text, then each member and two actions.
+export function menubarLines(config: Config, now = Date.now()): string[] {
+  const members = memberRows(config, now);
+  const current = members.find((row) => row.current)?.quota?.fiveHour ?? null;
+  const lines = [current === null ? 'crew' : `crew ${current}%`, '---'];
+  if (members.length === 0) lines.push('No crew members yet');
+  for (const row of members) {
+    lines.push(row.current ? `${row.name} | font=Helvetica-Bold` : row.name);
+    if (!row.quota) {
+      lines.push('no reading yet');
+      continue;
+    }
+    const resets = readResets(memberDir(row.name), now);
+    lines.push(windowLine('5h', row.quota.fiveHour, resetText(resets.fiveHour, false)), windowLine('week', row.quota.week, resetText(resets.week, true)));
+  }
+  const cli = path.join(packageRoot, 'dist', 'cli.js');
+  lines.push('---', `Open the crew menu | shell="${process.execPath}" param1="${cli}" terminal=true`, 'Refresh | refresh=true');
+  return lines;
 }
 
 // The one-screen menu: members with their 5-hour and week bars, then ship, model and effort.

@@ -8,7 +8,31 @@ Type `crew` (or `crw`, or `crewrota`) and one screen shows each member with bars
 The bars come from a status line crewrota gives every member that has none of its own, so they fill after the member's first session.
 That status line shows the model, the context used, the git branch, the 5-hour and week use, when the 5-hour window resets, the folder and the crew member.
 
+![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
+
 Status: Pre-release. Private while it is tried for a week.
+
+## What it looks like
+
+Every member's usage, as bars in the terminal (`crew quota`) or in a small window on your desktop (`crew widget`):
+
+![crew quota: 5-hour and week bars for every member](docs/images/crew-quota.png)
+
+![The crewrota widget: every member's bars, with reset times](docs/images/crew-widget.png)
+
+Your crew at a glance (`crew list`), and the ships they share (`crew ship list`, `crew ship mcp list <ship>`):
+
+![crew list: each member with its ship, usage, email and organisation](docs/images/crew-list.png)
+
+![crew ship list: each ship and its members](docs/images/crew-ship-list.png)
+
+![crew ship mcp list: the MCP servers a ship gives its members](docs/images/crew-ship-mcp.png)
+
+The status line crewrota gives a member that has none of its own:
+
+![The crewrota status line: model, context, branch, 5-hour and week use, reset, folder and crew member](docs/images/crew-statusline.png)
+
+The screenshots use a demo crew with example names, accounts and usage.
 
 ## Pick your OS
 
@@ -30,7 +54,9 @@ Status: Pre-release. Private while it is tried for a week.
 | `crew list` or `crew ls` | Members with `*` on the current one, ship, usage, email and organisation |
 | `crew whoami` | The current member: folder, ship, email, organisation, logged in or not |
 | `crew statusline` | The status line crewrota gives members without one: saves the session's usage to `quota.json` and prints one line |
-| `crew quota` | Every member's 5-hour and week use as bars, checked fresh first unless `crew config refresh off` |
+| `crew quota` | Every member's 5-hour and week use as bars, read fresh with quota-axi first unless `crew config refresh off` |
+| `crew quota --format menubar` | The same in the SwiftBar and xbar text format, read from each member's last reading without checking usage; `widget/crewrota.1m.sh` runs it in the macOS menu bar (beta, not yet run on a real Mac) |
+| `crew warmup [<member>...]` | Send every member (or the ones named) one short Haiku message, which starts its 5-hour window if none is running, then show the bars |
 | `crew widget` | Open the quota widget: every member's bars in a small always-on-top window (needs Python 3 with Tk) |
 | `crew widget close` | Close it |
 | `crew widget startup on\|off` | Open the widget at login, or stop that (Windows) |
@@ -47,12 +73,52 @@ Status: Pre-release. Private while it is tried for a week.
 | `crew ship join <member> <ship>` | Share `<member>`'s history through `<ship>`; its existing history is copied in |
 | `crew ship leave <member>` | Make `<member>` isolated again; the ship keeps its files |
 | `crew config permissions on\|off` | Start sessions with `--dangerously-skip-permissions`, or not |
-| `crew config refresh on\|off` | Check every member's usage as the menu opens, with one short message each (on by default) |
+| `crew config refresh on\|off` | Read every member's usage with quota-axi as the menu opens; no message is sent (on by default) |
+| `crew config lavish on\|off` | Add the plugin's Lavish rule at every session start, or stop that (on by default) |
 | `crew config show` | Remembered settings |
-| `crew doctor [--logins]` | Check Node, Claude Code, the folders and every link; `--logins` also asks Claude Code whether each member is logged in |
+| `crew setup [--yes] [--with-hooks]` | Install the default tools from upstream: one list with each command and where it lands, one yes; anything installed is skipped, never updated |
+| `crew init` | Write the project's root `.claude/` folder into the current folder; never overwrites a file |
+| `crew doctor [--logins]` | Check Node, Claude Code, the folders, every link and each default tool; `--logins` also asks Claude Code whether each member is logged in |
 | `crew --help`, `crew --version` | Help and version |
 
 Member and ship names use lowercase letters, digits and hyphens, start with a letter, and are at most 32 characters.
+
+## The default tools: crew setup
+
+`crew setup` prints one list, each tool with the exact command it runs and where it lands, and asks once.
+Anything already installed is skipped and never updated in place.
+`--yes` skips the question; without a terminal and without `--yes` it refuses.
+
+| Tool | Command | Lands in |
+|---|---|---|
+| lavish skill | `npx skills add kunchenguid/lavish-axi --skill lavish -g` | `~/.claude/skills/lavish` |
+| gh-axi skill | `npx skills add kunchenguid/gh-axi --skill gh-axi -g` | `~/.claude/skills/gh-axi` |
+| quota-axi skill | `npx skills add kunchenguid/quota-axi --skill quota-axi -g` | `~/.claude/skills/quota-axi` |
+| treehouse | `irm https://kunchenguid.github.io/treehouse/install.ps1 \| iex` (Windows), `curl -fsSL https://kunchenguid.github.io/treehouse/install.sh \| sh` (elsewhere) | the `treehouse` command on your PATH |
+| Playwright CLI | `npm install -g @playwright/cli@latest`, then `playwright-cli install --skills` (from your home folder) | the `playwright-cli` command and its skill |
+| Playwright MCP | adds `playwright` (`npx -y @playwright/mcp@latest`) to each ship's `mcp.json` that has none | `~/.crewrota/ships/<ship>/mcp.json` |
+
+Skills land in `~/.claude/skills`, which every member links.
+After the installs it checks `gh auth status` and only reports it: sign in to GitHub yourself with `gh auth login`.
+It also asks once whether lavish-axi may send its usage telemetry; a no is remembered, and every launch then passes `LAVISH_AXI_TELEMETRY=0`.
+`--with-hooks` also runs `npm install -g gh-axi lavish-axi`, then `gh-axi setup hooks` and `lavish-axi setup hooks` (opt-in session hooks).
+`crew doctor` shows each tool as installed or missing, with the command that installs it.
+
+## The Claude Code plugin: firstmate and the Lavish rule
+
+The repo is also a Claude Code plugin marketplace with one plugin, `crewrota`:
+
+```
+claude plugin marketplace add <owner>/crewrota
+claude plugin install crewrota@crewrota
+```
+
+Run these in your main Claude Code, not inside a member: every member links your main plugin cache and copies its plugin lists at launch.
+
+- **firstmate** (`/firstmate <task>`): runs a task through one or more crew members working headless. It reads the project's root `.claude/`, asks its questions on a Lavish page, writes the PRD and task list into the task's README, opens the agents board before the first dispatch, picks each member by rule and live quota (quota-axi), gives every lane its own tree (a treehouse lease, else a plain git worktree), checks and validates each result, drafts the ticket update in `evidence/ticket-update.md` for you to paste (it never posts), and writes what it learned into `.claude/memories/`. Nothing is committed, merged or published without your word.
+- **The Lavish rule**: a SessionStart hook that tells every session to put a question with options on a Lavish page in the task's `review/` folder, keep one-line facts in chat, and never share a page without your word. `crew config lavish off` turns it off.
+
+`crew init` in a project writes the root `.claude/` firstmate reads: `crewrota.json` (marks the root), a short `CLAUDE.md` only if the project has none, `memories/README.md`, `skills/` and `tasks/INDEX.md`.
 
 ## Where things live
 

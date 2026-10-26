@@ -56,7 +56,60 @@ crew
 
 The menu shows your members with their 5-hour and weekly bars, and the ship, model and effort below them.
 Up and down move, left and right change the ship, the model or the effort, enter starts, esc quits; each member starts on its own ship and its last model and effort.
-The bars show each member's last reading and fill after its first session. Each time the menu opens it checks them first, with one short message per member (on a member with no open 5-hour window, that message starts one); `crew config refresh off` stops that, and the bars then show each member's last reading.
+The bars show each member's last reading and fill after its first session. Each time the menu opens it reads them fresh with quota-axi, one call per member side by side, and sends no message; `crew config refresh off` stops that, and the bars then show each member's last reading.
+`crew warmup` sends each member one short Haiku message, which starts its 5-hour window if none is running.
 Or skip the menu with `crew work` (short for `crew run work`).
 At your first launch crewrota asks once whether sessions should start with `--dangerously-skip-permissions` (default no).
 If something is missing, `crew doctor` says what and how to fix it.
+
+## 6. Install the default tools and the plugin
+
+```bash
+crew setup
+```
+
+It lists each tool (the lavish, gh-axi and quota-axi skills, treehouse, Playwright CLI, and the Playwright MCP entry for each ship) with the exact command it runs and where it lands, then asks once.
+Anything already installed is skipped.
+It also asks whether lavish-axi may send usage telemetry, and checks `gh auth status` without signing you in.
+`crew doctor` shows what is still missing.
+
+Then add the plugin in your main Claude Code (not inside a member; members pick it up at their next launch):
+
+```bash
+claude plugin marketplace add <owner>/crewrota
+claude plugin install crewrota@crewrota
+```
+
+## 7. Set up a project and run firstmate
+
+In the project's folder:
+
+```bash
+crew init
+```
+
+It writes `.claude/` (`crewrota.json`, a short `CLAUDE.md` if the project has none, `memories/`, `skills/`, `tasks/INDEX.md`) and never overwrites a file.
+Then start Claude in that folder and hand it a task: `/firstmate <what you want done>`.
+
+## Menu bar (optional)
+
+Beta: this has not yet been run on a real Mac, in SwiftBar or in xbar.
+crewrota ships one plugin file, `crewrota.1m.sh`, that puts every member's 5-hour and week use in the menu bar and refreshes it every minute.
+It runs `crew quota --format menubar`, which only reads each member's last reading and never sends a message.
+
+Install SwiftBar (macOS 12 or newer) and open it once; it asks you to pick its plugin folder:
+
+```bash
+brew install swiftbar
+```
+
+Copy the plugin file into that folder and make it executable (here the folder is `~/SwiftBar`):
+
+```bash
+cp "$(npm root --global)/crewrota/widget/crewrota.1m.sh" ~/SwiftBar/
+chmod +x ~/SwiftBar/crewrota.1m.sh
+```
+
+The menu bar shows `crew` and the current member's 5-hour use, for example `crew 42%`.
+Click it for each member's 5-hour and week use with their reset times, green under 60%, amber from 60% and red from 80%, then "Open the crew menu" and "Refresh".
+xbar reads the same file from its own plugin folder.

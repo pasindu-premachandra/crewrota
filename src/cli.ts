@@ -3,18 +3,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isAccessible } from '@clack/core';
 import { cancel, intro, outro } from '@clack/prompts';
-import { authStatus, probeRateLimits, startClaude } from './claude.js';
+import { type RateLimits, authStatus, probeRateLimits, readRateLimits, startClaude } from './claude.js';
 import { type Choice, type Config, loadConfig, rememberedChoice, saveConfig } from './config.js';
 import { runDoctor } from './doctor.js';
 import { organizationLabel, readIdentity } from './identity.js';
+import { initProject } from './init.js';
 import { launch } from './launch.js';
 import { countSessionFiles, moveToRemoved } from './links.js';
 import { addMember, createMember, loginArgs, memberOrThrow, realDeps, removalImpact, removeMember, renameMember, useMember } from './members.js';
-import { ADD_MEMBER, ISOLATED, TYPE_A_NAME, askMemberName, askModelName, askSkipPermissions, askYesNo, crewMenu, pickChoice, pickMember, quotaLines } from './menu.js';
+import { ADD_MEMBER, ISOLATED, TYPE_A_NAME, askMemberName, askModelName, askSkipPermissions, askYesNo, crewMenu, menubarLines, pickChoice, pickMember, quotaLines } from './menu.js';
 import { checkName } from './names.js';
 import { configFile, crewHome, memberDir, packageRoot, removedDir, shipDir, shipProjectsDir } from './paths.js';
 import { formatRows, memberRows } from './rows.js';
 import { paint, paintError, say } from './say.js';
+import { realSetupRunner, runSetup, toolChecks } from './setup.js';
 import {
   SHIP_FOLDERS,
   createShip,
@@ -47,6 +49,9 @@ Usage:
   crew list | crew ls                          members with ship, usage, email and organisation
   crew whoami                                  the current member in detail
   crew quota                                   every member's 5-hour and week use as bars
+  crew quota --format menubar                  the same for a SwiftBar or xbar menu bar item (macOS, beta); never checks usage
+  crew warmup [<member>...]                    send each member one short message (Haiku), which starts its 5-hour
+                                               window if none is running, then show the bars
   crew widget                                  open the quota widget: every member's bars on your desktop
   crew widget close                            close it
   crew widget startup on|off                   open the widget at login, or stop that (Windows)
@@ -70,9 +75,12 @@ Usage:
   crew ship import <ship> --from <folder>      copy history, memory and session folders into the ship (a ccs context
                                                group folder works); run it again to add what is new
   crew config permissions on|off               start sessions with --dangerously-skip-permissions or not
-  crew config refresh on|off                   check every member's usage as the menu opens (one short message each; on by default)
+  crew config refresh on|off                   read every member's usage with quota-axi as the menu opens (no message; on by default)
+  crew config lavish on|off                    add the plugin's Lavish rule at every session start, or stop that (on by default)
   crew config show                             remembered settings
-  crew doctor [--logins]                       check the setup
+  crew setup [--yes] [--with-hooks]            install the default tools from upstream: one list, one yes; installed ones are skipped
+  crew init                                    write the project's .claude/ folder here; never overwrites a file
+  crew doctor [--logins]                       check the setup and the default tools
   crew statusline                              the status line crewrota gives members without one (saves quota.json)
   crew --help | --version
 
@@ -155,19 +163,11 @@ interface Launch {
   ship: string; // a ship name or ISOLATED
 }
 
-// One short message per member as the menu opens; on by default since 26 Oct, off with crew config refresh off.
-async function refreshReadings(config: Config): Promise<void> {
-  const names = Object.keys(config.members);
-  const who = names.length === 1 ? names[0] : `${names.length} members`;
-  const terminal = Boolean(process.stdout.isTTY);
-  if (terminal) {
-    process.stdout.write(
-      `${paint('text', `Checking usage for ${who}`)} ${paint('faint', '(one short message each; stop it with:')} ${paint('amber', 'crew config refresh off', true)}${paint('faint', ')...')}`,
-    );
-  }
+// A member whose reading fails keeps its last one.
+async function saveReadings(names: string[], read: (dir: string) => Promise<RateLimits | null>): Promise<void> {
   await Promise.all(
     names.map(async (name) => {
-      const limits = await probeRateLimits(memberDir(name));
+      const limits = await read(memberDir(name));
       try {
         if (limits) writeQuota(memberDir(name), { rate_limits: limits });
       } catch {
@@ -175,17 +175,51 @@ async function refreshReadings(config: Config): Promise<void> {
       }
     }),
   );
+}
+
+// Reads every member's usage with quota-axi as the menu opens, side by side; off with crew config refresh off.
+async function refreshReadings(config: Config): Promise<void> {
+  const names = Object.keys(config.members);
+  const who = names.length === 1 ? names[0] : `${names.length} members`;
+  const terminal = Boolean(process.stdout.isTTY);
+  if (terminal) {
+    process.stdout.write(
+      `${paint('text', `Checking usage for ${who}`)} ${paint('faint', '(crewrota reads each member\'s usage; stop it with:')} ${paint('amber', 'crew config refresh off', true)}${paint('faint', ')...')}`,
+    );
+  }
+  await saveReadings(names, readRateLimits);
   if (terminal) process.stdout.write('\r\x1b[2K');
 }
 
 async function quota(args: string[]): Promise<number> {
-  noArgs(args, 'crew quota');
+  const menubar = args.length === 2 && args[0] === '--format' && args[1] === 'menubar';
+  if (args.length > 0 && !menubar) usage('crew quota [--format menubar]');
   const config = loadConfig();
+  // SwiftBar runs it every minute, so it only reads quota.json and never checks usage.
+  if (menubar) {
+    console.log(menubarLines(config).join('\n'));
+    return 0;
+  }
   if (Object.keys(config.members).length === 0) {
     console.log('No crew members yet. Add one with: crew add <member>');
     return 0;
   }
   if (config.refreshReadings !== false) await refreshReadings(config);
+  console.log(quotaLines(config, process.stdout).join('\n'));
+  return 0;
+}
+
+// Opt-in: the one command that sends messages, to start the 5-hour windows of idle members.
+async function warmup(args: string[]): Promise<number> {
+  const { positional } = parseArgs(args);
+  const config = loadConfig();
+  if (Object.keys(config.members).length === 0) {
+    console.log('No crew members yet. Add one with: crew add <member>');
+    return 0;
+  }
+  for (const name of positional) memberOrThrow(config, name);
+  console.log(say('info', 'Each member gets one short message (Haiku), which starts its 5-hour window if none is running.'));
+  await saveReadings(positional.length > 0 ? positional : Object.keys(config.members), probeRateLimits);
   console.log(quotaLines(config, process.stdout).join('\n'));
   return 0;
 }
@@ -485,7 +519,13 @@ function shipImport(args: string[]): number {
 // A ship's MCP servers, copied into each of its members at launch; keys stay in this local file.
 function shipMcp(args: string[]): number {
   const [action, name, server, ...rest] = args;
-  const shipUsage = 'crew ship mcp list <ship> | crew ship mcp add <ship> <name> --url <url> | crew ship mcp add <ship> <name> -- <command> | crew ship mcp remove <ship> <name>';
+  const shipUsage = [
+    'crew ship mcp list <ship>',
+    'crew ship mcp add <ship> <name> --url <url> [--header "Name: value"]',
+    'crew ship mcp add <ship> <name> [--env KEY=value] -- <command> [args]',
+    'crew ship mcp add <ship> <name> --from <.claude.json>',
+    'crew ship mcp remove <ship> <name>',
+  ].join(' | ');
   if (!name) usage(shipUsage);
   checkName('ship', name);
   if (!shipExists(name)) throw new Error(`Ship ${name} doesn't exist`);
@@ -590,12 +630,17 @@ function configCommand(args: string[]): number {
     config.refreshReadings = args[1] === 'on';
     saveConfig(config);
     if (config.refreshReadings) {
-      console.log('The menu checks every member\'s usage as it opens.');
-      console.log('It sends one short message (Haiku) as each member; on a member with no open 5-hour window, that message starts one.');
+      console.log('The menu reads every member\'s usage with quota-axi as it opens; no message is sent.');
       console.log('Turn it off with: crew config refresh off');
     } else {
-      console.log('The menu shows each member\'s last reading and sends nothing.');
+      console.log('The menu shows each member\'s last reading.');
     }
+    return 0;
+  }
+  if (args[0] === 'lavish' && (args[1] === 'on' || args[1] === 'off') && args.length === 2) {
+    config.lavishRule = args[1] === 'on';
+    saveConfig(config);
+    console.log(config.lavishRule ? 'Every session starts with the Lavish rule from the crewrota plugin.' : 'Sessions start without the Lavish rule.');
     return 0;
   }
   if (args[0] === 'show' && args.length === 1) {
@@ -605,6 +650,8 @@ function configCommand(args: string[]): number {
     field('Crew home:', crewHome());
     field('--dangerously-skip-permissions:', permissions);
     field('Usage check when the menu opens:', config.refreshReadings === false ? 'off' : 'on');
+    field('Lavish rule at session start:', config.lavishRule === false ? 'off' : 'on');
+    field('Lavish telemetry:', config.lavishTelemetry === undefined ? 'not asked yet (crew setup asks)' : config.lavishTelemetry ? 'on' : 'off');
     field('Last model:', `${config.lastModel ?? 'default'}, last effort: ${config.lastEffort ?? 'default'}`);
     field('Current member:', `${config.current ?? 'none'}, previous: ${config.previous ?? 'none'}`);
     for (const [name, member] of Object.entries(config.members)) {
@@ -613,18 +660,38 @@ function configCommand(args: string[]): number {
     }
     return 0;
   }
-  usage('crew config permissions on|off | crew config refresh on|off | crew config show');
+  usage('crew config permissions on|off | crew config refresh on|off | crew config lavish on|off | crew config show');
 }
 
 function doctor(args: string[]): number {
   const { positional, flags } = parseArgs(args, [], ['--logins']);
   if (positional.length > 0) usage('crew doctor [--logins]');
-  const checks = runDoctor({ logins: flags['--logins'] === true });
+  const checks = [...runDoctor({ logins: flags['--logins'] === true }), ...toolChecks()];
   for (const check of checks) {
-    console.log(`${check.ok ? paint('green', 'ok  ') : paint('red', 'FAIL', true)}  ${check.detail}`);
+    const mark = check.ok ? paint('green', 'ok  ') : check.optional ? paint('amber', 'miss') : paint('red', 'FAIL', true);
+    console.log(`${mark}  ${check.detail}`);
     if (!check.ok && check.fix) console.log(`      ${paint('amber', 'fix:')} ${check.fix}`);
   }
-  return checks.every((check) => check.ok) ? 0 : 1;
+  return checks.every((check) => check.ok || check.optional) ? 0 : 1;
+}
+
+async function setup(args: string[]): Promise<number> {
+  const { positional, flags } = parseArgs(args, [], ['--yes', '--with-hooks']);
+  if (positional.length > 0) usage('crew setup [--yes] [--with-hooks]');
+  return runSetup(
+    { yes: flags['--yes'] === true, withHooks: flags['--with-hooks'] === true },
+    { run: realSetupRunner, ask: (message, initialValue) => askYesNo(message, initialValue), interactive: interactive(), print: (line) => console.log(line) },
+  );
+}
+
+function init(args: string[]): number {
+  noArgs(args, 'crew init');
+  const folder = process.cwd();
+  const { created, kept } = initProject(folder);
+  for (const file of created) console.log(say('ok', `created ${file}`));
+  for (const file of kept) console.log(say('info', `left alone ${file}`));
+  console.log(created.length > 0 ? `The project's .claude/ folder is ready in ${folder}` : `Nothing to create: ${folder} already has every file.`);
+  return 0;
 }
 
 // Claude Code pipes the session's JSON in; never fails, so the status line never shows an error.
@@ -671,8 +738,11 @@ async function main(args: string[]): Promise<number> {
   if (command === 'ship') return ship(rest);
   if (command === 'config') return configCommand(rest);
   if (command === 'doctor') return doctor(rest);
+  if (command === 'setup') return setup(rest);
+  if (command === 'init') return init(rest);
   if (command === 'statusline') return statusline();
   if (command === 'quota') return quota(rest);
+  if (command === 'warmup') return warmup(rest);
   if (command === 'widget') return widget(rest);
   if (command === 'list' || command === 'ls' || command === 'whoami' || command === 'current') {
     noArgs(rest, `crew ${command}`);

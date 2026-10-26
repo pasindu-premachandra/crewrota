@@ -63,6 +63,18 @@ export function readQuota(dir: string, now = Date.now()): Quota | null {
   };
 }
 
+// The reset times in quota.json that are still ahead, in seconds since the epoch.
+export function readResets(dir: string, now = Date.now()): { fiveHour: number | null; week: number | null } {
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(path.join(dir, 'quota.json'), 'utf8'));
+  } catch {
+    return { fiveHour: null, week: null };
+  }
+  const ahead = (at: unknown) => (typeof at === 'number' && at > now / 1000 ? at : null);
+  return { fiveHour: ahead(data?.five_hour_resets_at), week: ahead(data?.seven_day_resets_at) };
+}
+
 export function memberRows(config: Config, now = Date.now()): MemberRow[] {
   return Object.keys(config.members)
     .sort()

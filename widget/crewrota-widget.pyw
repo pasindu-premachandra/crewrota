@@ -138,7 +138,7 @@ class Widget:
     def __init__(self, args):
         self.home = Path(args.home)
         self.config = Path(args.config)
-        self.quota_command = [args.node, args.cli, "quota"]
+        self.warmup_command = [args.node, args.cli, "warmup"]
         self.position_file = self.home / "widget.json"
         self.close_file = self.home / "widget.close"
         if WINDOWS:
@@ -237,7 +237,7 @@ class Widget:
         if self.warming:
             return
         flags = subprocess.CREATE_NO_WINDOW if WINDOWS else 0
-        self.warming = subprocess.Popen(self.quota_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
+        self.warming = subprocess.Popen(self.warmup_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
         self.draw()
         self.wait_for_warm_up()
 

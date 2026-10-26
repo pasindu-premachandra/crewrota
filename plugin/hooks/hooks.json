@@ -1,0 +1,15 @@
+{
+  "description": "crewrota's Lavish rule at every session start; turn it off with: crew config lavish off",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lavish-rule.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}
