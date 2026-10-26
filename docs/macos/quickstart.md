@@ -1,6 +1,5 @@
 # crewrota quickstart for macOS (beta)
 
-Beta: these steps have not yet been run on a real Mac.
 Five steps. Run the commands in Terminal.
 
 ## 1. Install Claude Code
@@ -99,7 +98,7 @@ Then start Claude in that folder and hand it a task: `/firstmate <what you want 
 
 ## Menu bar (optional)
 
-Beta: this has not yet been run on a real Mac, in SwiftBar or in xbar.
+Beta.
 crewrota ships one plugin file, `crewrota.1m.sh`, that puts every member's 5-hour and week use in the menu bar and refreshes it every minute.
 It runs `crew quota --format menubar`, which only reads each member's last reading and never sends a message.
 

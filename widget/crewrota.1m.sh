@@ -2,7 +2,7 @@
 # <xbar.title>crewrota</xbar.title>
 # <xbar.version>v0.1.0</xbar.version>
 # <xbar.author>Pasindu Premachandra</xbar.author>
-# <xbar.desc>Every crew member's 5-hour and week use, read from crew quota --format menubar. Beta: not yet run on a real Mac.</xbar.desc>
+# <xbar.desc>Every crew member's 5-hour and week use, read from crew quota --format menubar. Beta.</xbar.desc>
 # <xbar.dependencies>node,crewrota</xbar.dependencies>
 # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
 # <swiftbar.hideLastUpdated>true</swiftbar.hideLastUpdated>

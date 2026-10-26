@@ -1,4 +1,25 @@
-# crewrota
+<h1 align="center">crewrota</h1>
+
+<p align="center"><img src="docs/images/logo.svg" width="112" alt="crewrota"></p>
+
+<p align="center"><b>Run Claude Code as any of your crew members</b></p>
+
+<p align="center">One Claude login per member, shared history on a ship, quota at a glance.</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3fb68b?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/npm/v/crewrota?style=for-the-badge&label=npm&color=3fb68b" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/node/v/crewrota?style=for-the-badge&color=6f7684" alt="Node version"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20beta-6f7684?style=for-the-badge" alt="Platforms: Windows, macOS beta">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> |
+  <a href="docs/windows/quickstart.md">Windows quickstart</a> |
+  <a href="docs/macos/quickstart.md">macOS quickstart</a> |
+  <a href="#commands">Commands</a> |
+  <a href="#the-claude-code-plugin-firstmate-and-the-lavish-rule">Plugin</a>
+</p>
 
 crewrota runs Claude Code as one of your crew members.
 A crew member is one Claude login with its own config folder, so each terminal can run a different account at the same time, and your main `~/.claude` login is never touched.
@@ -10,7 +31,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.1.0).
+Status: Pre-release (0.1.1).
 
 ## What it looks like
 
@@ -37,7 +58,7 @@ The screenshots use a demo crew with example names, accounts and usage.
 ## Pick your OS
 
 - Windows: [docs/windows/quickstart.md](docs/windows/quickstart.md)
-- macOS (beta: not yet run on a real Mac): [docs/macos/quickstart.md](docs/macos/quickstart.md)
+- macOS (beta): [docs/macos/quickstart.md](docs/macos/quickstart.md)
 
 ## Install
 
@@ -73,7 +94,7 @@ To install from source instead, use the install scripts in `scripts/`; the quick
 | `crew whoami` | The current member: folder, ship, email, organisation, logged in or not |
 | `crew statusline` | The status line crewrota gives members without one: saves the session's usage to `quota.json` and prints one line |
 | `crew quota` | Every member's 5-hour and week use as bars, read fresh with quota-axi first unless `crew config refresh off` |
-| `crew quota --format menubar` | The same in the SwiftBar and xbar text format, read from each member's last reading without checking usage; `widget/crewrota.1m.sh` runs it in the macOS menu bar (beta, not yet run on a real Mac) |
+| `crew quota --format menubar` | The same in the SwiftBar and xbar text format, read from each member's last reading without checking usage; `widget/crewrota.1m.sh` runs it in the macOS menu bar (beta) |
 | `crew warmup [<member>...]` | Send every member (or the ones named) one short Haiku message, which starts its 5-hour window if none is running, then show the bars |
 | `crew widget` | Open the quota widget: every member's bars in a small always-on-top window (needs Python 3 with Tk) |
 | `crew widget close` | Close it |
