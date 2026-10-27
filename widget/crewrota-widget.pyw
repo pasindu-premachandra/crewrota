@@ -73,6 +73,16 @@ def member_names(home, config):
     return names
 
 
+def newest_reading(home, config):
+    newest = 0
+    for name in member_names(home, config):
+        try:
+            newest = max(newest, (home / "members" / name / "quota.json").stat().st_mtime)
+        except OSError:
+            pass
+    return newest
+
+
 def load_rows(home, config, now):
     rows = []
     for name in member_names(home, config):
@@ -160,6 +170,7 @@ class Widget:
         self.canvas = tk.Canvas(self.root, width=self.width, bg=BG, highlightthickness=0)
         self.canvas.pack()
         self.warming = None
+        self.newest = 0
         self.menu = tk.Menu(self.root, tearoff=0)
         self.menu.add_command(label="Warm up all", command=self.warm_up)
         self.menu.add_command(label="Refresh", command=self.draw)
@@ -178,12 +189,14 @@ class Widget:
         self.draw()
         self.root.after(REFRESH_MS, self.tick)
 
-    # crew widget close asks by writing widget.close next to widget.pid.
+    # crew widget close asks by writing widget.close next to widget.pid; a newer quota.json redraws at once.
     def watch_for_close(self):
         if self.close_file.exists():
             self.close_file.unlink(missing_ok=True)
             self.root.destroy()
             return
+        if newest_reading(self.home, self.config) > self.newest:
+            self.draw()
         self.root.after(CLOSE_CHECK_MS, self.watch_for_close)
 
     def draw(self):
@@ -193,6 +206,7 @@ class Widget:
         c.delete("all")
         y = px(10)
         now = time.time()
+        self.newest = newest_reading(self.home, self.config)
         rows = load_rows(self.home, self.config, now)
         c.create_text(px(12), y, text="crewrota", anchor="nw", font=self.title_font, fill=FG)
         status = "warming up..." if self.warming else read_label(rows, now)

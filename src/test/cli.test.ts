@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { loadConfig, saveConfig } from '../config.js';
 import { linkState } from '../links.js';
 import { memberDir, removedDir, shipDir, shipProjectsDir } from '../paths.js';
+import { quotaAxiCommand } from '../claude.js';
 import { readQuota } from '../rows.js';
 import { cliPath, fakeMember, isolate, readLog } from './helpers.js';
 
@@ -25,7 +26,7 @@ function launches() {
 }
 
 test('--version prints the package version and --help lists the commands', () => {
-  assert.equal(cli(['--version']).out.trim(), '0.3.0');
+  assert.equal(cli(['--version']).out.trim(), '0.3.1');
   const help = cli(['--help']).out;
   for (const command of ['crew use <member>', 'crew use -', 'crew add <member>', 'crew run [<member>]', 'crew list', 'crew whoami', 'crew current',
     'crew login <member>', 'crew rename', 'crew drop', 'crew ship create', 'crew ship join', 'crew ship leave', 'config permissions on|off', 'crew doctor',
@@ -283,6 +284,20 @@ test('the usage check is on by default; config refresh off stops it and on says 
 });
 
 const probes = () => readLog(log).filter((call) => call.args.includes('-p'));
+
+test('quota-axi runs with node from the copy crewrota ships with, never through npx', () => {
+  const saved = process.env.CREWROTA_QUOTA_AXI;
+  delete process.env.CREWROTA_QUOTA_AXI;
+  try {
+    const [command, args] = quotaAxiCommand();
+    assert.equal(command, process.execPath);
+    assert.match(args[0], /quota-axi[\\/]dist[\\/]bin[\\/]quota-axi\.js$/);
+    assert.ok(fs.existsSync(args[0]));
+    assert.deepEqual(args.slice(1), ['--provider', 'claude', '--json']);
+  } finally {
+    process.env.CREWROTA_QUOTA_AXI = saved;
+  }
+});
 
 test('quota reads every member with quota-axi in its own folder, sends no message, then shows the bars; refresh off reads nothing', () => {
   const quotaLog = path.join(root, 'fake-quota-axi.log');

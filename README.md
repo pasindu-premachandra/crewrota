@@ -31,7 +31,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.3.0).
+Status: Pre-release (0.3.1).
 
 ## What it looks like
 
@@ -62,7 +62,7 @@ The screenshots use a demo crew with example names, accounts and usage.
 
 ## Install
 
-crewrota needs Node 22 or newer and Claude Code.
+crewrota needs Node 22.19 or newer and Claude Code.
 
 ```
 npm install -g crewrota

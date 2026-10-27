@@ -1,5 +1,8 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
+import path from 'node:path';
 
 export interface RunResult {
   status: number | null;
@@ -124,13 +127,20 @@ export function probeRateLimits(dir: string, timeoutMs = 30_000): Promise<RateLi
 
 const QUOTA_AXI_ARGS = ['--provider', 'claude', '--json'];
 
+// The quota-axi crewrota ships with; its exports hide package.json, so walk up from its entry point.
+export function quotaAxiBin(): string {
+  let dir = path.dirname(createRequire(import.meta.url).resolve('quota-axi'));
+  while (!fs.existsSync(path.join(dir, 'package.json'))) dir = path.dirname(dir);
+  const bin = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).bin['quota-axi'];
+  return path.join(dir, bin);
+}
+
 // CREWROTA_QUOTA_AXI points crewrota at another quota-axi, such as the fake one the tests use.
+// Started with node, not npx: npx checks the registry and starts npm on every call (about 2.4 s per menu open).
 export function quotaAxiCommand(): [string, string[]] {
   const override = process.env.CREWROTA_QUOTA_AXI;
   if (override) return /\.[cm]?js$/.test(override) ? [process.execPath, [override, ...QUOTA_AXI_ARGS]] : [override, QUOTA_AXI_ARGS];
-  const npx = ['npx', '-y', 'quota-axi', ...QUOTA_AXI_ARGS];
-  // npx on Windows is a .cmd shim, which only cmd.exe can start.
-  return process.platform === 'win32' ? ['cmd.exe', ['/d', '/c', ...npx]] : ['npx', npx.slice(1)];
+  return [process.execPath, [quotaAxiBin(), ...QUOTA_AXI_ARGS]];
 }
 
 // Reads quota-axi's JSON in the shape the status line gets as rate_limits; only a fresh reading counts.
