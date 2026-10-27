@@ -14,6 +14,7 @@
 </p>
 
 <p align="center">
+  <a href="https://crewrota.pasindug.com">Website</a> |
   <a href="#install">Install</a> |
   <a href="docs/windows/quickstart.md">Windows quickstart</a> |
   <a href="docs/macos/quickstart.md">macOS quickstart</a> |
@@ -31,7 +32,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.3.1).
+Status: Pre-release (0.3.2).
 
 ## What it looks like
 

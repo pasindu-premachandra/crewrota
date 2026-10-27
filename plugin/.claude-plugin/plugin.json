@@ -1,7 +1,7 @@
 {
   "name": "crewrota",
   "description": "firstmate: hand a task to 1 or N crew members running headless, each in its own leased tree, watched on an agents board. Plus a SessionStart rule that puts questions with options on a Lavish page.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": {
     "name": "Pasindu Premachandra"
   },

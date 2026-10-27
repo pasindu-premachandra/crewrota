@@ -1,6 +1,6 @@
 {
   "name": "crewrota",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Run Claude Code as one of your crew members: one Claude login per config folder, shared history through ships, remembered model and effort.",
   "keywords": [
     "claude",
@@ -9,7 +9,7 @@
     "accounts",
     "crew"
   ],
-  "homepage": "https://github.com/pasindu-premachandra/crewrota#readme",
+  "homepage": "https://crewrota.pasindug.com",
   "bugs": {
     "url": "https://github.com/pasindu-premachandra/crewrota/issues"
   },
