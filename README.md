@@ -32,7 +32,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.3.3).
+Status: Stable (1.0.0).
 
 ## What it looks like
 

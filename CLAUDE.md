@@ -3,7 +3,7 @@
 crewrota is a Node/TypeScript CLI (`crewrota`, `crw`, `crew`) that runs Claude Code as one of the user's crew members.
 A crew member is one Claude login in its own config folder (`CLAUDE_CONFIG_DIR`), logged in through Claude Code's own first-run login (plain `claude` in the member folder; `claude auth login` only with `--email`/`--sso`); a ship is the `projects/` and session folders several members share through links, plus the ship's own MCP servers.
 crewrota owns the member folders, the ships, the menu, the remembered model and effort, the skip-permissions answer and the shared items from the main setup.
-Pre-release (0.1.0), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
+Stable (1.0.0), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
 
 ## Layout
 
