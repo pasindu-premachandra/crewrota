@@ -10,6 +10,13 @@ export interface Member {
   created: string;
 }
 
+export interface Shortcut {
+  name: string;
+  member: string;
+  folder: string;
+  hotkey?: string;
+}
+
 export interface Config {
   skipPermissions: boolean | null;
   refreshReadings?: boolean; // probe every member's usage when the menu opens; on unless set to false
@@ -20,6 +27,7 @@ export interface Config {
   current?: string;
   previous?: string;
   members: Record<string, Member>;
+  shortcuts?: Shortcut[];
 }
 
 export interface Choice {
@@ -40,6 +48,7 @@ export function loadConfig(file = configFile()): Config {
     current: data.current,
     previous: data.previous,
     members: data.members ?? {},
+    ...(Array.isArray(data.shortcuts) ? { shortcuts: data.shortcuts } : {}),
   };
 }
 

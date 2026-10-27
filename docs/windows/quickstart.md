@@ -77,7 +77,7 @@ crew
 ```
 
 The menu shows your members with their 5-hour and weekly bars, and the ship, model and effort below them.
-Up and down move, left and right change the ship, the model or the effort, enter starts, esc quits; each member starts on its own ship and its last model and effort.
+Up and down (or 1 to 9) pick the member, tab picks the ship, the model or the effort, left and right change it, enter starts, esc quits; each member starts on its own ship and its last model and effort.
 The bars show each member's last reading and fill after its first session. Each time the menu opens it reads them fresh with quota-axi, one call per member side by side, and sends no message; `crew config refresh off` stops that, and the bars then show each member's last reading.
 `crew warmup` sends each member one short Haiku message, which starts its 5-hour window if none is running.
 Or skip the menu with `crew work` (short for `crew run work`), or make one member the default with `crew use work` and run `crew run`.
@@ -142,3 +142,15 @@ crew restore .\crewrota-backup-20261026-0905.zip --password
 
 The restore renames your projects' session folders when your user folder differs; add `--map E:\Projects=D:\work` for projects that moved elsewhere.
 It ends with one `crew login <member>` line for each member; run each one to sign that member in again.
+
+## VS Code shortcuts (optional)
+
+```powershell
+crew shortcut add site --member work --folder E:\code\site --hotkey CTRL+ALT+C
+crew shortcut list
+crew shortcut open site
+```
+
+A shortcut opens a folder in VS Code and runs `crew <member>` there as a task, in an editor tab.
+`add` writes `site.code-workspace` under `%USERPROFILE%\.crewrota\shortcuts` and a `site` entry in the Start Menu, which the hotkey also opens; VS Code brings back that window's layout each time.
+Change one with `crew shortcut set`, remove one with `crew shortcut remove`; `crew rename` and `crew drop` carry a member's shortcuts along.

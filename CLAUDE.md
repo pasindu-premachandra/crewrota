@@ -18,6 +18,7 @@ src/shared.ts     shared items from the main ~/.claude: links, copies, mcpServer
 src/links.ts      link helpers, folder moves to removed/, session file counts
 src/rows.ts       member rows for the menu and list, quota.json readings
 src/statusline.ts the status line given to members without one: writes quota.json, prints the main setup's layout (model, context, branch, 5h, 7d, reset, folder, crew member)
+src/shortcuts.ts  crew shortcut: VS Code workspace files under shortcuts/, the Start Menu .lnk, the Code.exe lookup
 src/widget.ts     crew widget: opens widget/crewrota-widget.pyw with pythonw, asks it to close through widget.close, the Startup shortcut
 widget/           the quota widget (Python + Tk), shipped in the npm package
 templates/dot-claude/  the root .claude/ that crew init writes (crewrota.json marks the root)

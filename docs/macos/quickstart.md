@@ -60,7 +60,7 @@ crew
 ```
 
 The menu shows your members with their 5-hour and weekly bars, and the ship, model and effort below them.
-Up and down move, left and right change the ship, the model or the effort, enter starts, esc quits; each member starts on its own ship and its last model and effort.
+Up and down (or 1 to 9) pick the member, tab picks the ship, the model or the effort, left and right change it, enter starts, esc quits; each member starts on its own ship and its last model and effort.
 The bars show each member's last reading and fill after its first session. Each time the menu opens it reads them fresh with quota-axi, one call per member side by side, and sends no message; `crew config refresh off` stops that, and the bars then show each member's last reading.
 `crew warmup` sends each member one short Haiku message, which starts its 5-hour window if none is running.
 Or skip the menu with `crew work` (short for `crew run work`).
@@ -138,3 +138,15 @@ chmod +x ~/SwiftBar/crewrota.1m.sh
 The menu bar shows `crew` and the current member's 5-hour use, for example `crew 42%`.
 Click it for each member's 5-hour and week use with their reset times, green under 60%, amber from 60% and red from 80%, then "Open the crew menu" and "Refresh".
 xbar reads the same file from its own plugin folder.
+
+## VS Code shortcuts (optional)
+
+```bash
+crew shortcut add site --member work --folder ~/code/site
+crew shortcut list
+crew shortcut open site
+```
+
+A shortcut opens a folder in VS Code and runs `crew <member>` there as a task, in an editor tab.
+`add` writes `site.code-workspace` under `~/.crewrota/shortcuts`, and `open` starts it with the `code` command (in VS Code, run "Shell Command: Install 'code' command in PATH" once); VS Code brings back that window's layout each time.
+Change one with `crew shortcut set`, remove one with `crew shortcut remove`; `crew rename` and `crew drop` carry a member's shortcuts along.

@@ -18,6 +18,7 @@ import { configFile, crewHome, memberDir, packageRoot, removedDir, shipDir, ship
 import { formatRows, memberRows } from './rows.js';
 import { paint, paintError, say } from './say.js';
 import { realSetupRunner, runSetup, toolChecks } from './setup.js';
+import { addShortcut, launcherFile, memberShortcuts, openShortcut, removeShortcut, repointShortcuts, setShortcut, workspaceFile } from './shortcuts.js';
 import {
   SHIP_FOLDERS,
   createShip,
@@ -60,6 +61,14 @@ Usage:
   crew login <member> | crew logout <member>   log a member in or out; its folder stays
   crew rename <old> <new>                      rename a member
   crew drop <member> [--force] [--yes]         drop a member: its folder moves to removed/ (crew remove works too)
+  crew shortcut add <name> --member <m> [--folder <path>] [--hotkey <keys>]
+                                               a VS Code shortcut: opens the folder and runs crew <m> in it; on Windows
+                                               also a Start Menu entry, with a hotkey such as CTRL+ALT+C
+  crew shortcut list                           the shortcuts with member, folder and hotkey
+  crew shortcut set <name> [--member <m>] [--folder <path>] [--hotkey <keys>|--no-hotkey]
+                                               change a shortcut
+  crew shortcut remove <name>                  remove a shortcut's workspace file and Start Menu entry
+  crew shortcut open <name>                    open a shortcut in VS Code
   crew ship create <ship>                      make an empty ship
   crew ship list                               ships and their members
   crew ship rename <old> <new>                 rename a ship and re-point its members
@@ -397,8 +406,11 @@ function rename(args: string[]): number {
   const { positional } = parseArgs(args);
   if (positional.length !== 2) usage('crew rename <old> <new>');
   const [from, to] = positional;
-  renameMember(loadConfig(), from, to);
+  const config = loadConfig();
+  renameMember(config, from, to);
   console.log(`Renamed crew member ${from} to ${to}.`);
+  const moved = repointShortcuts(config, from, to);
+  if (moved.length > 0) console.log(`Shortcuts now running crew ${to}: ${moved.map((shortcut) => shortcut.name).join(', ')}`);
   return 0;
 }
 
@@ -412,6 +424,8 @@ async function drop(args: string[]): Promise<number> {
     throw new Error(`${member} is the current crew member. Switch first with crew use <member>, or pass --force.`);
   }
   for (const line of removalImpact(config, member)) console.log(line);
+  const shortcuts = memberShortcuts(config, member).map((shortcut) => shortcut.name);
+  if (shortcuts.length > 0) console.log(`Shortcuts: ${shortcuts.join(', ')} (removed with it)`);
   if (!flags['--yes']) {
     needTerminal('Confirming the drop', 'Pass --yes to drop without asking.');
     if (!(await askYesNo(`Drop crew member ${member}? Its folder is moved to ${removedDir()}`, false))) {
@@ -420,8 +434,53 @@ async function drop(args: string[]): Promise<number> {
     }
   }
   const movedTo = removeMember(config, member);
+  for (const name of shortcuts) removeShortcut(config, name);
   console.log(movedTo ? `Dropped crew member ${member}. Its folder is kept at ${movedTo}` : `Dropped crew member ${member}. Its folder was already gone.`);
   return 0;
+}
+
+function shortcut(args: string[]): number {
+  const [action, ...rest] = args;
+  const { positional, flags } = parseArgs(rest, ['--member', '--folder', '--hotkey'], ['--no-hotkey']);
+  const config = loadConfig();
+  const windows = process.platform === 'win32';
+  if (action === 'add' && positional.length === 1 && !flags['--no-hotkey']) {
+    const member = stringFlag(flags['--member']);
+    if (!member) usage('crew shortcut add <name> --member <m> [--folder <path>] [--hotkey <keys>]');
+    const added = addShortcut(config, positional[0], { member, folder: stringFlag(flags['--folder']) ?? process.cwd(), hotkey: stringFlag(flags['--hotkey']) });
+    console.log(say('ok', `Shortcut ${added.name} opens ${added.folder} in VS Code and runs crew ${added.member} there.`));
+    console.log(say('info', `Workspace file: ${workspaceFile(added.name)}`));
+    if (windows) console.log(say('info', `Start Menu: ${launcherFile(added.name)}${added.hotkey ? `, hotkey ${added.hotkey}` : ''}`));
+    else console.log(say('info', 'The Start Menu entry and the hotkey are Windows-only for now.'));
+    console.log(say('info', `Open it with: crew shortcut open ${added.name}`));
+    return 0;
+  }
+  if (action === 'list' && positional.length === 0 && Object.keys(flags).length === 0) {
+    const shortcuts = config.shortcuts ?? [];
+    if (shortcuts.length === 0) console.log('No shortcuts yet. Add one with: crew shortcut add <name> --member <m> --folder <path>');
+    const width = Math.max(0, ...shortcuts.map((entry) => entry.name.length));
+    for (const entry of shortcuts) {
+      console.log(`${paint('text', entry.name.padEnd(width), true)}  crew ${entry.member}  ${entry.folder}${entry.hotkey ? `  ${paint('faint', entry.hotkey)}` : ''}`);
+    }
+    return 0;
+  }
+  if (action === 'set' && positional.length === 1 && !(flags['--hotkey'] && flags['--no-hotkey'])) {
+    const hotkey = flags['--no-hotkey'] ? null : stringFlag(flags['--hotkey']);
+    const changed = setShortcut(config, positional[0], { member: stringFlag(flags['--member']), folder: stringFlag(flags['--folder']), hotkey });
+    console.log(say('ok', `Shortcut ${changed.name}: crew ${changed.member} in ${changed.folder}${changed.hotkey ? `, hotkey ${changed.hotkey}` : ''}.`));
+    return 0;
+  }
+  if (action === 'remove' && positional.length === 1 && Object.keys(flags).length === 0) {
+    removeShortcut(config, positional[0]);
+    console.log(say('ok', `Removed shortcut ${positional[0]}${windows ? ' and its Start Menu entry' : ''}.`));
+    return 0;
+  }
+  if (action === 'open' && positional.length === 1 && Object.keys(flags).length === 0) {
+    const code = openShortcut(config, positional[0]);
+    console.log(say('ok', `Opening ${workspaceFile(positional[0])} with ${code}`));
+    return 0;
+  }
+  usage('crew shortcut add|list|set|remove|open (see crew --help)');
 }
 
 async function shipDelete(config: Config, args: string[]): Promise<number> {
@@ -786,6 +845,7 @@ async function main(args: string[]): Promise<number> {
   if (command === 'rename') return rename(rest);
   if (command === 'drop' || command === 'remove') return drop(rest);
   if (command === 'ship') return ship(rest);
+  if (command === 'shortcut') return shortcut(rest);
   if (command === 'backup') return backupCommand(rest);
   if (command === 'restore') return restoreCommand(rest);
   if (command === 'config') return configCommand(rest);

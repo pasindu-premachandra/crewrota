@@ -185,20 +185,23 @@ export function menubarLines(config: Config, now = Date.now()): string[] {
   return lines;
 }
 
-// The one-screen menu: members with their 5-hour and week bars, then ship, model and effort.
-// Up and down move through every row, left and right change ship, model or effort, enter starts.
+const SETTINGS = ['ship', 'model', 'effort'] as const;
+
+// The one-screen menu: members with their 5-hour and week bars, then one line of ship, model and effort.
+// Up and down (or 1 to 9) pick the member, tab picks the setting, left and right change it, enter starts.
 // Needs at least one member. Returns the pick, ADD_MEMBER, or null when the user cancels.
 export async function crewMenu(config: Config, io: MenuIO = {}): Promise<Pick | typeof ADD_MEMBER | null> {
   const output = io.output ?? process.stdout;
   const { paint, highlight } = painter(output);
   const members = memberRows(config);
   const ships = [ISOLATED, ...listShips(config)];
-  const rows = [...members.map((row) => row.name), ADD_MEMBER, 'ship', 'model', 'effort'];
+  const rows = [...members.map((row) => row.name), ADD_MEMBER];
   const savedShip = (member: string) => config.members[member]?.ship ?? ISOLATED;
   let cursor = Math.max(0, members.findIndex((row) => row.name === config.current));
   let marked = members[cursor].name;
   let choice = rememberedChoice(config, marked);
   let ship = savedShip(marked);
+  let setting = 0;
   const modelValues = () => [...(MODELS.includes(choice.model) || choice.model === TYPE_A_NAME ? MODELS : [...MODELS, choice.model]), TYPE_A_NAME];
   const nameWidth = nameWidthOf(members);
   const lineWidth = 5 + nameWidth + 3 + COLUMN_WIDTH + 5 + COLUMN_WIDTH + 2;
@@ -208,11 +211,18 @@ export async function crewMenu(config: Config, io: MenuIO = {}): Promise<Pick | 
     const mark = row.name === marked ? paint('green', '›') : ' ';
     return line(row.name, `  ${mark}  ${paint('text', row.name.padEnd(nameWidth), true)}   ${memberUsage(paint, row)}`);
   };
-  const switcher = (row: string, value: string) => {
-    const here = rows[cursor] === row;
-    const shown = value === TYPE_A_NAME ? 'type a name' : optionLabel(value);
-    const arrow = (char: string) => paint(here ? 'text' : 'faint', char);
-    return line(row, `     ${paint('faint', row.padEnd(nameWidth))}   ${arrow('‹')} ${paint('text', shown, true)} ${arrow('›')}`);
+  // The setting tab is on shows its arrows and the row background; the others show only their value.
+  const field = (at: number, value: string) => {
+    const shown = paint('text', value === TYPE_A_NAME ? 'type a name' : optionLabel(value), true);
+    const label = paint('faint', SETTINGS[at]);
+    if (at !== setting) return `${label}  ${shown}`;
+    return `${label}  ${highlight(`${paint('text', '‹')} ${shown} ${paint('text', '›')}`, 0)}`;
+  };
+  const settingsLine = () => `     ${[field(0, ship), field(1, choice.model), field(2, choice.effort)].join('     ')}`;
+  const mark = (name: string) => {
+    marked = name;
+    choice = rememberedChoice(config, marked);
+    ship = savedShip(marked);
   };
   const addLine = () =>
     rows[cursor] === ADD_MEMBER
@@ -245,11 +255,9 @@ export async function crewMenu(config: Config, io: MenuIO = {}): Promise<Pick | 
           ...members.map(memberLine),
           addLine(),
           '',
-          switcher('ship', ship),
-          switcher('model', choice.model),
-          switcher('effort', choice.effort),
+          settingsLine(),
           '',
-          `  ${key('↑↓', 'move', 'amber')}   ${key('←→', 'ship, model, effort')}   ${key('enter', 'start')}   ${key('esc', 'quit')}`,
+          `  ${key('↑↓ 1-9', 'member', 'amber')}   ${key('tab', 'setting')}   ${key('←→', 'change')}   ${key('enter', 'start')}   ${key('esc', 'quit')}`,
           '',
         ].join('\n');
       },
@@ -260,17 +268,21 @@ export async function crewMenu(config: Config, io: MenuIO = {}): Promise<Pick | 
   prompt.on('cursor', (action) => {
     if (action === 'up') cursor = Math.max(0, cursor - 1);
     if (action === 'down') cursor = Math.min(rows.length - 1, cursor + 1);
-    const row = rows[cursor];
-    if ((action === 'up' || action === 'down') && members.some((member) => member.name === row) && row !== marked) {
-      marked = row;
-      choice = rememberedChoice(config, marked);
-      ship = savedShip(marked);
-    }
+    if ((action === 'up' || action === 'down') && cursor < members.length) mark(members[cursor].name);
     if (action === 'left' || action === 'right') {
       const step = action === 'left' ? -1 : 1;
-      if (row === 'ship') ship = cycle(ships, ship, step);
-      if (row === 'model') choice.model = cycle(modelValues(), choice.model, step);
-      if (row === 'effort') choice.effort = cycle(EFFORTS, choice.effort, step);
+      if (SETTINGS[setting] === 'ship') ship = cycle(ships, ship, step);
+      if (SETTINGS[setting] === 'model') choice.model = cycle(modelValues(), choice.model, step);
+      if (SETTINGS[setting] === 'effort') choice.effort = cycle(EFFORTS, choice.effort, step);
+    }
+    prompt.value = current();
+  });
+  prompt.on('key', (char, info) => {
+    if (info?.name === 'tab') setting = (setting + (info.shift ? SETTINGS.length - 1 : 1)) % SETTINGS.length;
+    const number = Number(char);
+    if (char && /^[1-9]$/.test(char) && number <= members.length) {
+      cursor = number - 1;
+      mark(members[cursor].name);
     }
     prompt.value = current();
   });

@@ -31,7 +31,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.2.0).
+Status: Pre-release (0.3.0).
 
 ## What it looks like
 
@@ -103,6 +103,11 @@ To install from source instead, use the install scripts in `scripts/`; the quick
 | `crew login <member>`, `crew logout <member>` | Log a member in or out again; its folder stays |
 | `crew rename <old> <new>` | Rename a member |
 | `crew drop <member> [--force] [--yes]` | Drop a member: its folder moves to `removed/` (refuses the current member unless `--force`); `crew remove` works too |
+| `crew shortcut add <name> --member <m> [--folder <path>] [--hotkey <keys>]` | A VS Code shortcut: a workspace file that opens the folder (the current one by default) and runs `crew <m>` there; on Windows also a Start Menu entry, with an optional hotkey such as `CTRL+ALT+C` |
+| `crew shortcut list` | The shortcuts with their member, folder and hotkey |
+| `crew shortcut set <name> [--member <m>] [--folder <path>] [--hotkey <keys>\|--no-hotkey]` | Change only the given parts of a shortcut and write its files again |
+| `crew shortcut remove <name>` | Delete a shortcut's workspace file and Start Menu entry |
+| `crew shortcut open <name>` | Open a shortcut in VS Code |
 | `crew ship create <ship>` | Make an empty ship |
 | `crew ship list` | Ships and their members |
 | `crew ship rename <old> <new>` | Rename a ship; its members follow |

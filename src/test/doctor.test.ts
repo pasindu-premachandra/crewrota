@@ -89,3 +89,12 @@ test('doctor checks each member folder, ship join and shared link, and logins on
     ['FAIL login: drifted: not logged in', 'ok login: work: logged in'],
   );
 });
+
+test('doctor checks for VS Code only once there is a shortcut', () => {
+  const config = loadConfig();
+  assert.equal(runDoctor({}, runner).find((check) => check.name === 'vscode'), undefined);
+  config.shortcuts = [{ name: 'job', member: 'work', folder: 'E:/code' }];
+  saveConfig(config);
+  process.env.CREWROTA_CODE = path.join(mainClaudeDir(), 'Code.exe');
+  assert.deepEqual(details(runDoctor({}, runner).filter((check) => check.name === 'vscode')), [`ok vscode: VS Code ${process.env.CREWROTA_CODE}`]);
+});

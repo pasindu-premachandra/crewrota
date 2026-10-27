@@ -73,6 +73,8 @@ const UP = '\x1b[A';
 const DOWN = '\x1b[B';
 const RIGHT = '\x1b[C';
 const LEFT = '\x1b[D';
+const TAB = '\t';
+const SHIFT_TAB = '\x1b[Z';
 const ENTER = '\r';
 const ESC = '\x1b';
 
@@ -98,10 +100,8 @@ test('the one-screen menu starts on the current member with its remembered ship,
   assert.match(screen, /› {2}work +▖{6}▖{8} +42% +▖{3}▖{11} +18%/);
   assert.match(screen, /home +no reading yet/);
   assert.match(screen, /\+ Add a crew member/);
-  assert.match(screen, /ship +‹ team ›/);
-  assert.match(screen, /model +‹ opus ›/);
-  assert.match(screen, /effort +‹ max ›/);
-  assert.match(screen, /↑↓ move {3}←→ ship, model, effort {3}enter start {3}esc quit/);
+  assert.match(screen, /ship {2}‹ team › {5}model {2}opus {5}effort {2}max/);
+  assert.match(screen, /↑↓ 1-9 member {3}tab setting {3}←→ change {3}enter start {3}esc quit/);
 });
 
 test("moving to another member brings back that member's remembered choice and ship", async () => {
@@ -109,15 +109,29 @@ test("moving to another member brings back that member's remembered choice and s
   assert.deepEqual(result, { member: 'home', choice: { model: 'sonnet', effort: 'low' }, ship: 'isolated' });
 });
 
-test('left and right change ship, model and effort; enter starts from any row', async () => {
-  const { result } = await drive([DOWN, DOWN, LEFT, DOWN, RIGHT, DOWN, LEFT, ENTER]);
+test('tab picks the setting and left and right change it, for the member the cursor is on', async () => {
+  const { result } = await drive([LEFT, TAB, RIGHT, TAB, LEFT, ENTER]);
   assert.deepEqual(result, { member: 'work', choice: { model: 'sonnet', effort: 'xhigh' }, ship: 'isolated' });
+  const { screen } = await drive([TAB, TAB, ENTER]);
+  assert.match(screen, /ship {2}team {5}model {2}opus {5}effort {2}‹ max ›/);
+});
+
+test('changing the settings keeps the picked member, even one above others in the list', async () => {
+  const { result } = await drive([UP, TAB, TAB, RIGHT, SHIFT_TAB, RIGHT, ENTER]);
+  assert.deepEqual(result, { member: 'home', choice: { model: TYPE_A_NAME, effort: 'medium' }, ship: 'isolated' });
+});
+
+test('1 to 9 jump to that member; a number past the last member does nothing', async () => {
+  for (const [keys, member] of [[['1'], 'home'], [['1', '9'], 'home'], [['1', '2'], 'work']] as const) {
+    const { result } = await drive([...keys, ENTER]);
+    assert.equal((result as { member: string }).member, member);
+  }
 });
 
 test('the model can be set to "type a name", which the caller then asks for', async () => {
-  const { result, screen } = await drive([DOWN, DOWN, DOWN, RIGHT, RIGHT, ENTER]);
+  const { result, screen } = await drive([TAB, RIGHT, RIGHT, ENTER]);
   assert.deepEqual(result, { member: 'work', choice: { model: TYPE_A_NAME, effort: 'max' }, ship: 'team' });
-  assert.match(screen, /model +‹ type a name ›/);
+  assert.match(screen, /model {2}‹ type a name ›/);
 });
 
 test('enter on the add row asks to add a member; esc closes the menu', async () => {

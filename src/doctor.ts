@@ -5,6 +5,7 @@ import { type Config, loadConfig } from './config.js';
 import { linkState } from './links.js';
 import { configFile, crewHome, memberDir, shipProjectsDir } from './paths.js';
 import { sharedLinkStates } from './shared.js';
+import { findCode } from './shortcuts.js';
 import { SHIP_FOLDERS, shipFolder } from './ships.js';
 
 export interface Check {
@@ -32,6 +33,12 @@ const linkProblems: Record<string, string> = {
   'not-a-link': 'is a folder, not a link',
   dangling: 'points at a folder that does not exist',
   elsewhere: 'points at a different folder',
+};
+
+const installCode: Record<string, string> = {
+  win32: 'Install VS Code from https://code.visualstudio.com, then open a new terminal.',
+  darwin: 'Install VS Code from https://code.visualstudio.com, then run "Shell Command: Install \'code\' command in PATH" from its Command Palette.',
+  linux: 'Install VS Code from https://code.visualstudio.com so that code is on PATH.',
 };
 
 function forThisOs(texts: Record<string, string>): string {
@@ -79,6 +86,10 @@ export function runDoctor(options: { logins?: boolean } = {}, run: Runner = runS
     for (const member of members) checks.push(...memberChecks(config, member, options.logins === true, run));
     const state = config.skipPermissions === null ? 'not asked yet (asked at the first launch)' : config.skipPermissions ? 'on' : 'off';
     checks.push({ name: 'permissions', ok: true, detail: `--dangerously-skip-permissions: ${state}` });
+    if (config.shortcuts?.length) {
+      const code = findCode();
+      checks.push({ name: 'vscode', ok: code !== null, detail: code ? `VS Code ${code}` : 'VS Code was not found; crew shortcut needs it', fix: forThisOs(installCode) });
+    }
   }
 
   return checks;
