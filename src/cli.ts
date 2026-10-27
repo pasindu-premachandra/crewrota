@@ -242,7 +242,7 @@ async function widget(args: string[]): Promise<number> {
   const [action, value, ...extra] = args;
   if (action === undefined) {
     if (openWidget() === 'already') console.log(say('info', 'The widget is already open. Close it with: crew widget close'));
-    else console.log(say('ok', 'The widget is open. Right-click it to warm up, refresh or quit; close it with: crew widget close'));
+    else console.log(say('ok', 'The widget is open. Its bolt warms up every member; right-click it to refresh or quit; close it with: crew widget close'));
     return 0;
   }
   if (action === 'close' && value === undefined) {

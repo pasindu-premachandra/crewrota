@@ -87,12 +87,13 @@ If something is missing, `crew doctor` says what and how to fix it.
 ## 6. Keep the bars on your desktop
 
 ```powershell
-crew widget                  # open it; drag it anywhere, right-click to warm up, refresh or quit
+crew widget                  # open it; drag it anywhere, the bolt warms up every member, right-click to refresh or quit
 crew widget close            # close it
 crew widget startup on       # open it at every login (off removes that)
 ```
 
 The widget is a small always-on-top window with every member's 5-hour and week bars, read from the same files as `crew quota`.
+Its footer shows today's tokens across the crew (from the members' session transcripts), the clock and a link to a coding-music stream.
 It needs Python 3 with Tk; the python.org installer includes both.
 
 ## 7. Install the default tools and the plugin

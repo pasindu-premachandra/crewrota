@@ -32,7 +32,7 @@ That status line shows the model, the context used, the git branch, the 5-hour a
 
 ![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
-Status: Pre-release (0.3.2).
+Status: Pre-release (0.3.3).
 
 ## What it looks like
 
@@ -40,7 +40,7 @@ Every member's usage, as bars in the terminal (`crew quota`) or in a small windo
 
 ![crew quota: 5-hour and week bars for every member](docs/images/crew-quota.png)
 
-![The crewrota widget: every member's bars, with reset times](docs/images/crew-widget.png)
+![The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link](docs/images/crew-widget.png)
 
 Your crew at a glance (`crew list`), and the ships they share (`crew ship list`, `crew ship mcp list <ship>`):
 
@@ -97,7 +97,7 @@ To install from source instead, use the install scripts in `scripts/`; the quick
 | `crew quota` | Every member's 5-hour and week use as bars, read fresh with quota-axi first unless `crew config refresh off` |
 | `crew quota --format menubar` | The same in the SwiftBar and xbar text format, read from each member's last reading without checking usage; `widget/crewrota.1m.sh` runs it in the macOS menu bar (beta) |
 | `crew warmup [<member>...]` | Send every member (or the ones named) one short Haiku message, which starts its 5-hour window if none is running, then show the bars |
-| `crew widget` | Open the quota widget: every member's bars in a small always-on-top window (needs Python 3 with Tk) |
+| `crew widget` | Open the quota widget: every member's bars in a small always-on-top window, with today's token count across the crew, the clock, a button that warms up every member and a coding-music link (needs Python 3 with Tk) |
 | `crew widget close` | Close it |
 | `crew widget startup on\|off` | Open the widget at login, or stop that (Windows) |
 | `crew current` | The current member's name only (exit code 1 when there is none) |
