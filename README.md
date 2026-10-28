@@ -11,6 +11,7 @@
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/npm/v/crewrota?style=for-the-badge&label=npm&color=3fb68b" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/node/v/crewrota?style=for-the-badge&color=6f7684" alt="Node version"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20beta-6f7684?style=for-the-badge" alt="Platforms: Windows, macOS beta">
+  <a href="https://github.com/sponsors/pasindu-premachandra"><img src="https://img.shields.io/badge/sponsor-GitHub-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
 </p>
 
 <p align="center">
@@ -19,7 +20,8 @@
   <a href="docs/windows/quickstart.md">Windows quickstart</a> |
   <a href="docs/macos/quickstart.md">macOS quickstart</a> |
   <a href="#commands">Commands</a> |
-  <a href="#the-claude-code-plugin-firstmate-and-the-lavish-rule">Plugin</a>
+  <a href="#the-claude-code-plugin-firstmate-and-the-lavish-rule">Plugin</a> |
+  <a href="https://github.com/sponsors/pasindu-premachandra">Sponsor</a>
 </p>
 
 crewrota runs Claude Code as one of your crew members.
