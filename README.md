@@ -12,7 +12,6 @@
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/npm/v/crewrota?style=for-the-badge&label=npm&color=3fb68b" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/node/v/crewrota?style=for-the-badge&color=6f7684" alt="Node version"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20beta-6f7684?style=for-the-badge" alt="Platforms: Windows, macOS beta">
-  <a href="https://github.com/sponsors/pasindu-premachandra"><img src="https://img.shields.io/badge/sponsor-GitHub-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
 </p>
 
 <p align="center">
@@ -24,13 +23,13 @@
   <a href="https://github.com/sponsors/pasindu-premachandra">Sponsor</a>
 </p>
 
+<p align="center"><img src="docs/images/crew-menu.png" width="720" alt="The crew menu: three members with their 5-hour and week bars, then the ship, model and effort on one line"><br><sub>The <code>crew</code> menu with a demo crew. Ship, model and effort are remembered per member.</sub></p>
+
 ## Why
 
 One Claude plan can run out before your work does: the 5-hour window closes mid-task, and the weekly cap lands mid-week.
 If you pay for more than one login, switching means signing out, signing in and losing your place.
 crewrota keeps every login signed in, carries your sessions across them and shows which one has room.
-
-![The crew menu: three members with their 5-hour and week bars, then the ship, model and effort](docs/images/crew-menu.png)
 
 ## What you get
 
@@ -43,7 +42,7 @@ crewrota keeps every login signed in, carries your sessions across them and show
 - **Backup and restore.** One zip, with an optional password, moves your ships and settings to a new machine. Logins are never in it.
 - **firstmate plugin.** `/firstmate <task>` hands a task to other members running in their own git worktree. Nothing is committed without your word.
 
-![The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link](docs/images/crew-widget.png)
+<p align="center"><img src="docs/images/crew-widget.png" width="330" alt="The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link"><br><sub>The <code>crew widget</code> on your desktop: every member's bars, today's tokens and a warm-up button.</sub></p>
 
 ## Install
 
