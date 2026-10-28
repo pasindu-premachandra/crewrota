@@ -86,7 +86,7 @@ test('the workspace runs crew in a shell that stays open after the session', () 
   const shortcut = { name: 'site', member: 'work', folder: slashed(project) };
   assert.deepEqual(workspace(shortcut, '/bin/zsh'), {
     folders: [{ path: slashed(project) }],
-    settings: { 'terminal.integrated.defaultLocation': 'editor' },
+    settings: { 'terminal.integrated.defaultLocation': 'editor', 'terminal.integrated.persistentSessionReviveProcess': 'onExitAndWindowClose' },
     tasks: {
       version: '2.0.0',
       tasks: [

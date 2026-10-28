@@ -1,6 +1,6 @@
 {
   "name": "crewrota",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Run Claude Code as one of your crew members: one Claude login per config folder, shared history through ships, remembered model and effort.",
   "keywords": [
     "claude",

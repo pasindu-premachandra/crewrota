@@ -83,7 +83,7 @@ export function workspace(shortcut: Shortcut, shell = findShell()): unknown {
   const run = shell ? { type: 'process', command: shell, args: ['-l', '-i', '-c', `${crew}; exec "${shell}" -l -i`] } : { type: 'shell', command: crew };
   return {
     folders: [{ path: shortcut.folder }],
-    settings: { 'terminal.integrated.defaultLocation': 'editor' },
+    settings: { 'terminal.integrated.defaultLocation': 'editor', 'terminal.integrated.persistentSessionReviveProcess': 'onExitAndWindowClose' },
     tasks: {
       version: '2.0.0',
       tasks: [
