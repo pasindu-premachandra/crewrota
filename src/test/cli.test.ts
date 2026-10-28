@@ -26,7 +26,7 @@ function launches() {
 }
 
 test('--version prints the package version and --help lists the commands', () => {
-  assert.equal(cli(['--version']).out.trim(), '1.0.0');
+  assert.equal(cli(['--version']).out.trim(), '1.0.1');
   const help = cli(['--help']).out;
   for (const command of ['crew use <member>', 'crew use -', 'crew add <member>', 'crew run [<member>]', 'crew list', 'crew whoami', 'crew current',
     'crew login <member>', 'crew rename', 'crew drop', 'crew ship create', 'crew ship join', 'crew ship leave', 'config permissions on|off', 'crew doctor',

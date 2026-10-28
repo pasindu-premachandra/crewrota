@@ -45,6 +45,21 @@ export function findCode(): string | null {
   }
 }
 
+// Git Bash on Windows (Claude Code needs Git for Windows there), the login shell elsewhere.
+export function findShell(): string | null {
+  if (process.platform !== 'win32') return process.env.SHELL || '/bin/sh';
+  const places = [process.env.CLAUDE_CODE_GIT_BASH_PATH, process.env.ProgramFiles && path.join(process.env.ProgramFiles, 'Git', 'bin', 'bash.exe')];
+  try {
+    const out = execFileSync('where.exe', ['git'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const git = out.split(/\r?\n/).find((line) => line.trim())?.trim();
+    if (git) places.splice(1, 0, path.join(path.dirname(path.dirname(git)), 'bin', 'bash.exe')); // <Git>\cmd\git.exe sits next to <Git>\bin
+  } catch {
+    // git not on PATH
+  }
+  const found = places.find((place) => place && fs.existsSync(place));
+  return found ? found.replace(/\\/g, '/') : null;
+}
+
 function codeOrThrow(): string {
   const code = findCode();
   if (!code) throw new Error('VS Code was not found. Install it from https://code.visualstudio.com, then try again.');
@@ -62,8 +77,10 @@ export function parseFolder(folder: string): string {
   return path.resolve(folder).replace(/\\/g, '/');
 }
 
-export function workspace(shortcut: Shortcut): unknown {
+export function workspace(shortcut: Shortcut, shell = findShell()): unknown {
   const crew = `crew ${shortcut.member}`;
+  // the shell takes over when the session ends, so the tab stays usable
+  const run = shell ? { type: 'process', command: shell, args: ['-l', '-i', '-c', `${crew}; exec "${shell}" -l -i`] } : { type: 'shell', command: crew };
   return {
     folders: [{ path: shortcut.folder }],
     settings: { 'terminal.integrated.defaultLocation': 'editor' },
@@ -72,8 +89,7 @@ export function workspace(shortcut: Shortcut): unknown {
       tasks: [
         {
           label: crew,
-          type: 'shell',
-          command: crew,
+          ...run,
           options: { cwd: shortcut.folder },
           runOptions: { runOn: 'folderOpen' },
           presentation: { reveal: 'always', panel: 'dedicated', focus: true },

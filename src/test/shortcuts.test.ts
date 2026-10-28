@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { loadConfig, saveConfig } from '../config.js';
-import { type LinkRunner, addShortcut, launcherFile, openShortcut, parseHotkey, removeShortcut, repointShortcuts, setShortcut, workspaceFile } from '../shortcuts.js';
+import { type LinkRunner, addShortcut, findShell, launcherFile, openShortcut, parseHotkey, removeShortcut, repointShortcuts, setShortcut, workspace, workspaceFile } from '../shortcuts.js';
 import { cliPath, fakeMember, isolate } from './helpers.js';
 
 const root = isolate();
@@ -43,24 +43,7 @@ test('add writes the workspace file, the config entry and, on Windows, the Start
   assert.deepEqual(added, { name: 'site', member: 'work', folder: slashed(project), hotkey: 'CTRL+ALT+C' });
   assert.deepEqual(loadConfig().shortcuts, [added]);
   assert.ok(workspaceFile('site').startsWith(path.join(process.env.CREWROTA_HOME!, 'shortcuts')));
-  assert.deepEqual(JSON.parse(fs.readFileSync(workspaceFile('site'), 'utf8')), {
-    folders: [{ path: slashed(project) }],
-    settings: { 'terminal.integrated.defaultLocation': 'editor' },
-    tasks: {
-      version: '2.0.0',
-      tasks: [
-        {
-          label: 'crew work',
-          type: 'shell',
-          command: 'crew work',
-          options: { cwd: slashed(project) },
-          runOptions: { runOn: 'folderOpen' },
-          presentation: { reveal: 'always', panel: 'dedicated', focus: true },
-          problemMatcher: [],
-        },
-      ],
-    },
-  });
+  assert.deepEqual(JSON.parse(fs.readFileSync(workspaceFile('site'), 'utf8')), workspace(added));
   if (process.platform !== 'win32') {
     assert.deepEqual(links, []);
     return;
@@ -99,6 +82,42 @@ test('a hotkey is one or more of CTRL, ALT and SHIFT, then a letter, digit or F1
   for (const bad of ['CTRL+', 'CTRL+F13', 'WIN+C', 'CTRL+ALT+CC', 'CTRL ALT C']) assert.throws(() => parseHotkey(bad), /CTRL\+ALT\+C/, bad);
 });
 
+test('the workspace runs crew in a shell that stays open after the session', () => {
+  const shortcut = { name: 'site', member: 'work', folder: slashed(project) };
+  assert.deepEqual(workspace(shortcut, '/bin/zsh'), {
+    folders: [{ path: slashed(project) }],
+    settings: { 'terminal.integrated.defaultLocation': 'editor' },
+    tasks: {
+      version: '2.0.0',
+      tasks: [
+        {
+          label: 'crew work',
+          type: 'process',
+          command: '/bin/zsh',
+          args: ['-l', '-i', '-c', 'crew work; exec "/bin/zsh" -l -i'],
+          options: { cwd: slashed(project) },
+          runOptions: { runOn: 'folderOpen' },
+          presentation: { reveal: 'always', panel: 'dedicated', focus: true },
+          problemMatcher: [],
+        },
+      ],
+    },
+  });
+  const task = (workspace(shortcut, null) as { tasks: { tasks: Record<string, unknown>[] } }).tasks.tasks[0];
+  assert.equal(task.type, 'shell');
+  assert.equal(task.command, 'crew work');
+  assert.equal(task.args, undefined);
+});
+
+test('findShell gives Git Bash on Windows and the login shell elsewhere', () => {
+  const shell = findShell();
+  if (process.platform === 'win32') {
+    if (shell) assert.match(shell, /\/bin\/bash\.exe$/i);
+    return;
+  }
+  assert.equal(shell, process.env.SHELL || '/bin/sh');
+});
+
 test('set changes only the flags given, and --no-hotkey drops the hotkey', () => {
   const moved = setShortcut(config, 'site', { folder: other }, fakeLink);
   assert.deepEqual(moved, { name: 'site', member: 'work', folder: slashed(other), hotkey: 'CTRL+ALT+C' });
@@ -106,7 +125,7 @@ test('set changes only the flags given, and --no-hotkey drops the hotkey', () =>
   assert.deepEqual(cleared, { name: 'site', member: 'home', folder: slashed(other) });
   assert.deepEqual(loadConfig().shortcuts, [cleared]);
   const file = JSON.parse(fs.readFileSync(workspaceFile('site'), 'utf8'));
-  assert.equal(file.tasks.tasks[0].command, 'crew home');
+  assert.equal(file.tasks.tasks[0].label, 'crew home');
   assert.equal(file.folders[0].path, slashed(other));
   if (process.platform === 'win32') assert.equal(links.pop()!.CREW_HOTKEY, '');
   assert.throws(() => setShortcut(config, 'nothing', {}, fakeLink), /Shortcut nothing doesn't exist/);
@@ -144,7 +163,7 @@ test('through the command line: add, list, rename and drop carry the shortcut al
 
   assert.equal(cli(['rename', 'work', 'office']).code, 0);
   assert.match(cli(['shortcut', 'list']).out, /job  crew office/);
-  assert.equal(JSON.parse(fs.readFileSync(workspaceFile('job'), 'utf8')).tasks.tasks[0].command, 'crew office');
+  assert.equal(JSON.parse(fs.readFileSync(workspaceFile('job'), 'utf8')).tasks.tasks[0].label, 'crew office');
 
   const dropped = cli(['drop', 'office', '--yes']);
   assert.equal(dropped.code, 0, dropped.err);

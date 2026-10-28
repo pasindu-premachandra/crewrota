@@ -152,6 +152,6 @@ crew shortcut list
 crew shortcut open site
 ```
 
-A shortcut opens a folder in VS Code and runs `crew <member>` there as a task, in an editor tab.
+A shortcut opens a folder in VS Code and runs `crew <member>` there as a task, in an editor tab; when the session ends, the tab stays open as a shell in that folder.
 `add` writes `site.code-workspace` under `%USERPROFILE%\.crewrota\shortcuts` and a `site` entry in the Start Menu, which the hotkey also opens; VS Code brings back that window's layout each time.
 Change one with `crew shortcut set`, remove one with `crew shortcut remove`; `crew rename` and `crew drop` carry a member's shortcuts along.
