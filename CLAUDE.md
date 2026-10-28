@@ -3,7 +3,7 @@
 crewrota is a Node/TypeScript CLI (`crewrota`, `crw`, `crew`) that runs Claude Code as one of the user's crew members.
 A crew member is one Claude login in its own config folder (`CLAUDE_CONFIG_DIR`), logged in through Claude Code's own first-run login (plain `claude` in the member folder; `claude auth login` only with `--email`/`--sso`); a ship is the `projects/` and session folders several members share through links, plus the ship's own MCP servers.
 crewrota owns the member folders, the ships, the menu, the remembered model and effort, the skip-permissions answer and the shared items from the main setup.
-Stable (1.0.2), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
+Stable (1.0.3), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
 
 ## Layout
 
@@ -36,7 +36,7 @@ src/paths.ts      config, crewrota home, member, ship and main-setup paths
 src/names.ts      member and ship name rule
 src/test/         node:test tests, fixtures/ holds the fake claude
 scripts/          install.ps1 and install.sh (global install from a packed build), check-private.mjs (denylist scan), hooks/pre-push
-docs/             windows/ and macos/ quickstarts (macOS is beta)
+docs/             windows/ and macos/ quickstarts (macOS is beta), commands.md (every command and the reference the README links to)
 ```
 
 ## Commands

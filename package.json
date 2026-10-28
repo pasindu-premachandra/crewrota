@@ -1,13 +1,18 @@
 {
   "name": "crewrota",
-  "version": "1.0.2",
-  "description": "Run Claude Code as one of your crew members: one Claude login per config folder, shared history through ships, remembered model and effort.",
+  "version": "1.0.3",
+  "description": "Run Claude Code as any of your crew members: one login each, shared history, quota at a glance.",
   "keywords": [
     "claude",
     "claude-code",
     "cli",
     "accounts",
-    "crew"
+    "crew",
+    "anthropic",
+    "multi-account",
+    "quota",
+    "usage-limits",
+    "rate-limits"
   ],
   "homepage": "https://crewrota.pasindug.com",
   "bugs": {
