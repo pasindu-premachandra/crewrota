@@ -443,13 +443,18 @@ test('names outside the ANSI code page survive, with and without a password', { 
   const { home, project } = seedContext('ctx-names');
   const name = 'සිංහල-தமிழ்-日本語.md';
   fs.writeFileSync(path.join(project, '.claude', 'tasks', 'export', name), 'notes\n');
+  fs.mkdirSync(path.join(project, '.claude', 'tasks', 'தமிழ்'));
+  fs.writeFileSync(path.join(project, '.claude', 'tasks', 'தமிழ்', name), 'notes\n');
   for (const [folder, env, args] of [['out-names', {}, []], ['out-names-pw', { CREWROTA_BACKUP_PASSWORD: 'pw' }, ['--password']]] as [string, Record<string, string>, string[]][]) {
-    const { zip } = backupTo(home, folder, env, args);
+    const { zip, code, err } = backupTo(home, folder, env, args);
+    assert.equal(code, 0, err);
+    assert.ok(zipEntries(zip).every((entry) => /^[ -~]*$/.test(entry.name)));
     const b = makeHome(`${folder}-b`);
     const target = path.join(root, `${folder}-code`);
     const restored = cli(['restore', zip, '--map', `${path.dirname(project)}=${target}`, ...args], b, env);
     assert.equal(restored.code, 0, restored.err);
     assert.ok(fs.readdirSync(path.join(target, 'app', '.claude', 'tasks', 'export')).includes(name));
+    assert.equal(fs.readFileSync(path.join(target, 'app', '.claude', 'tasks', 'தமிழ்', name), 'utf8'), 'notes\n');
   }
 });
 

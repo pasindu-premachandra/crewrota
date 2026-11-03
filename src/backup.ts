@@ -22,6 +22,7 @@ interface Manifest {
   ships: string[];
   members: Record<string, { ship?: string; model?: string; effort?: string }>;
   context?: BackupContext;
+  renamed?: Record<string, string>;
 }
 
 interface BackupContext {
@@ -267,6 +268,32 @@ function reportContext({ context, stats }: { context: BackupContext; stats: Copy
   }
 }
 
+// Windows' own tar (bsdtar 3.8) crashes on a name outside the ANSI code page, so such names go in as ~crewN and the manifest maps them back.
+function asciiNames(dir: string, base: string, renamed: Record<string, string>): void {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let name = entry.name;
+    if (/[^ -~]/.test(name)) {
+      let n = Object.keys(renamed).length;
+      do name = `~crew${++n}`; while (fs.existsSync(path.join(dir, name)));
+      fs.renameSync(path.join(dir, entry.name), path.join(dir, name));
+      renamed[`${base}/${name}`] = entry.name;
+    }
+    if (entry.isDirectory()) asciiNames(path.join(dir, name), `${base}/${name}`, renamed);
+  }
+}
+
+function restoreNames(extract: string, renamed: Record<string, string>): void {
+  const deepestFirst = Object.entries(renamed).sort(([a], [b]) => b.split('/').length - a.split('/').length);
+  for (const [entry, name] of deepestFirst) {
+    const parts = entry.split('/');
+    if (parts[0] !== 'context' || parts.some((part) => part === '..' || part === '.') || /[\\/]/.test(name) || name === '..' || name === '.') {
+      throw new Error(`The backup renames ${entry} to ${name}, which is outside its context folder, so crewrota restored nothing from it.`);
+    }
+    const from = path.join(extract, ...parts);
+    if (fs.existsSync(from)) fs.renameSync(from, path.join(path.dirname(from), name));
+  }
+}
+
 // One zip: the manifest, settings and context from a stage folder, then the ships straight from the crew home. Never a member folder.
 export async function backup(config: Config, options: BackupOptions, log: (line: string) => void = console.log): Promise<string> {
   for (const folder of options.skip ?? []) if (!fs.existsSync(folder)) log(say('warn', `--skip ${folder}: no such folder.`));
@@ -304,6 +331,9 @@ export async function backup(config: Config, options: BackupOptions, log: (line:
     if (options.context !== false) {
       gathered = gatherContext(config, skip, temp);
       manifest.context = gathered.context;
+      const renamed: Record<string, string> = {};
+      if (fs.existsSync(path.join(temp, 'context'))) asciiNames(path.join(temp, 'context'), 'context', renamed);
+      if (Object.keys(renamed).length > 0) manifest.renamed = renamed;
     }
     fs.writeFileSync(path.join(temp, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     if (fs.existsSync(configFile())) fs.copyFileSync(configFile(), path.join(temp, 'config.json'));
@@ -493,6 +523,7 @@ export async function restore(config: Config, zip: string, options: RestoreOptio
     const manifest = readJson(path.join(extract, 'manifest.json')) as Manifest | null;
     if (!manifest) throw new Error(`${zip} is not a crewrota backup: it has no manifest.json.`);
     if (manifest.format !== 1 && manifest.format !== 2) throw new Error(`${zip} has backup format ${manifest.format}; this crewrota reads formats 1 and 2. Update crewrota and try again.`);
+    if (manifest.renamed) restoreNames(extract, manifest.renamed);
 
     const extractShips = path.join(extract, 'ships');
     const ships = shipFolders(extractShips);
