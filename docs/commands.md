@@ -148,6 +148,7 @@ Logins are never in it: after `crew restore`, sign each member in again with `cr
 Claude Code files each session under its project's full folder path, so the restore renames those folders when your home folder differs on the new machine.
 For projects that moved elsewhere, add `--map <old folder>=<new folder>`, for example `--map E:\Projects=D:\work`; it renames that folder and every folder below it, and you can repeat it.
 The zip holds your transcripts, task notes and the ships' MCP keys in plain text, so use `--password` to encrypt it with AES-256; without a terminal crewrota reads the password from `CREWROTA_BACKUP_PASSWORD`. File and folder names inside the zip stay readable even with a password.
+A name outside plain ASCII (Sinhala, Tamil, Japanese) is stored as `~crew1`, `~crew2` and so on, because the tar that newer Windows ships crashes on such names; the restore puts the real names back.
 The zip is written and read by bsdtar, which Windows 10 and 11 and macOS already have; on Linux install `libarchive-tools`.
 
 ### Project `.claude` folders and skills
