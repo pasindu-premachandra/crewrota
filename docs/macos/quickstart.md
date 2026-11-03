@@ -105,7 +105,7 @@ On the old machine:
 crew backup --password
 ```
 
-It writes one zip, for example `crewrota-backup-20261026-0905.zip`, with your ships, members and settings, encrypted with the password you type twice.
+It writes one zip, for example `crewrota-backup-20261026-0905.zip`, with your ships, members, settings, skills and every project's `.claude` (tasks, evidence, memories), encrypted with the password you type twice. Add `--dry-run` first to see what goes in.
 Logins are never in it.
 Copy the zip to the new machine, install crewrota there (steps 1 to 3), then:
 
@@ -113,7 +113,7 @@ Copy the zip to the new machine, install crewrota there (steps 1 to 3), then:
 crew restore ./crewrota-backup-20261026-0905.zip --password
 ```
 
-The restore renames your projects' session folders when your home folder differs; add `--map /Users/old/code=/Users/new/work` for projects that moved elsewhere.
+The restore renames your projects' session folders when your home folder differs; add `--map /Users/old/code=/Users/new/work` for projects that moved elsewhere, and `--clone` to fetch each repo's code from GitHub.
 It ends with one `crew login <member>` line for each member; run each one to sign that member in again.
 
 ## Menu bar (optional)

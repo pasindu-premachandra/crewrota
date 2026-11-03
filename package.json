@@ -1,6 +1,6 @@
 {
   "name": "crewrota",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Run Claude Code as any of your crew members: one login each, shared history, quota at a glance.",
   "keywords": [
     "claude",

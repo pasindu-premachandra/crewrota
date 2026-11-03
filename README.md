@@ -39,7 +39,7 @@ crewrota keeps every login signed in, carries your sessions across them and show
 - **Shared history.** Members on the same ship share history and memory, so `--resume` finds a session another member started. A ship also gives its members the same MCP servers.
 - **Your setup in every member.** Your skills, agents, commands, plugins, settings and `CLAUDE.md` come with every member.
 - **VS Code shortcuts.** `crew shortcut add` opens a folder as a member, with a Start Menu hotkey on Windows.
-- **Backup and restore.** One zip, with an optional password, moves your ships and settings to a new machine. Logins are never in it.
+- **Backup and restore.** One zip, with an optional password, moves your ships, settings, skills and every project's `.claude` (tasks, evidence, memories) to a new machine, and `--clone` brings the code back too. Logins are never in it.
 - **firstmate plugin.** `/firstmate <task>` hands a task to other members running in their own git worktree. Nothing is committed without your word.
 
 <p align="center"><img src="docs/images/crew-widget.png" width="330" alt="The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link"><br><sub>The <code>crew widget</code> on your desktop: every member's bars, today's tokens and a warm-up button.</sub></p>
@@ -104,4 +104,4 @@ Change it any time with `crew config permissions on` or `crew config permissions
 
 MIT. Bug reports and ideas are welcome as [GitHub issues](https://github.com/pasindu-premachandra/crewrota/issues).
 
-Status: Stable (1.0.3).
+Status: Stable (1.0.4).

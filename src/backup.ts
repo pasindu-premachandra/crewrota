@@ -1,11 +1,13 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { type Config, loadConfig, saveConfig } from './config.js';
 import { findLinks, lstatOrNull, stamp } from './links.js';
 import { checkName } from './names.js';
-import { configFile, crewHome, memberDir, shipsDir } from './paths.js';
+import { type CopyStats, type Repo, cloneRepo, copyTree, emptyStats, findRepos, findRoots, installedPlugins, knownFolders, mapFolder, skillNames } from './context.js';
+import { configFile, crewHome, mainClaudeDir, memberDir, shipsDir } from './paths.js';
+import { progress } from './progress.js';
 import { say } from './say.js';
 import { type ImportCount, SHIP_FOLDERS, createShip, importFolder, importIntoShip, joinShip, readShipMcp, shipExists, shipMcpFile, writeShipMcp } from './ships.js';
 
@@ -19,6 +21,14 @@ interface Manifest {
   home: string;
   ships: string[];
   members: Record<string, { ship?: string; model?: string; effort?: string }>;
+  context?: BackupContext;
+}
+
+interface BackupContext {
+  roots: { id: string; path: string }[];
+  repos: Repo[];
+  skills: string[];
+  plugins: string[];
 }
 
 export interface BackupOptions {
@@ -26,11 +36,15 @@ export interface BackupOptions {
   password?: string;
   version: string;
   now?: Date;
+  skip?: string[];
+  context?: boolean;
+  dryRun?: boolean;
 }
 
 export interface RestoreOptions {
   maps: [string, string][];
   password?: string;
+  clone?: boolean;
   now?: Date;
 }
 
@@ -49,14 +63,71 @@ export function tarPath(): string {
   throw new Error('crewrota needs bsdtar to write and read a backup zip (on Linux, install libarchive-tools).');
 }
 
-function runTar(tar: string, args: string[]): void {
-  const result = spawnSync(tar, args, { encoding: 'utf8' });
-  if (result.error) throw new Error(`Could not run ${tar}: ${result.error.message}`);
-  if (result.status !== 0) throw new Error(`bsdtar failed: ${result.stderr.trim() || `exit code ${result.status}`}`);
+// bsdtar -v prints one "a <name>" (create) or "x <name>" (extract) line per entry, which moves the bar.
+function runTar(tar: string, args: string[], label: string, total: number): Promise<void> {
+  const bar = progress(label);
+  return new Promise((resolve, reject) => {
+    const child = spawn(tar, ['-v', ...args], { windowsHide: true });
+    const tail: string[] = [];
+    let done = 0;
+    let rest = '';
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk: string) => {
+      const lines = (rest + chunk).split(/\r?\n/);
+      rest = lines.pop() ?? '';
+      for (const line of lines) {
+        if (/^[ax] /.test(line)) done++;
+        if (/^[ax] [^:]*$/.test(line) || !line.trim()) continue;
+        tail.push(line);
+        if (tail.length > 5) tail.shift();
+      }
+      bar.update(done, total, total > 0 ? `${done.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} files` : `${done.toLocaleString('en-US')} files`);
+    });
+    child.on('error', (error) => {
+      bar.end();
+      reject(new Error(`Could not run ${tar}: ${error.message}`));
+    });
+    child.on('close', (code) => {
+      bar.end();
+      if (rest.trim() && !/^[ax] [^:]*$/.test(rest)) tail.push(rest);
+      if (code === 0) resolve();
+      else reject(new Error(`bsdtar failed: ${tail.join('\n').trim() || `exit code ${code}`}`));
+    });
+  });
 }
 
-function passphrase(password: string | undefined): string[] {
-  return password ? ['--options', 'zip:encryption=aes256', '--passphrase', password] : [];
+// Files and folders below dir, plus dir itself: what bsdtar will list for it.
+function countEntries(dir: string): number {
+  let count = 1;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    count += entry.isDirectory() ? countEntries(path.join(dir, entry.name)) : 1;
+  }
+  return count;
+}
+
+// The entry count from the zip's end record (the ZIP64 one above 65,535 entries), so the restore bar has a total.
+export function zipEntryCount(file: string): number {
+  const size = fs.statSync(file).size;
+  const length = Math.min(size, 65_557);
+  const tail = Buffer.alloc(length);
+  const handle = fs.openSync(file, 'r');
+  try {
+    fs.readSync(handle, tail, 0, length, size - length);
+    const end = tail.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    if (end < 0) return 0;
+    const count = tail.readUInt16LE(end + 10);
+    if (count !== 0xffff || end < 20 || tail.readUInt32LE(end - 20) !== 0x07064b50) return count;
+    const record = Buffer.alloc(40);
+    fs.readSync(handle, record, 0, record.length, Number(tail.readBigUInt64LE(end - 12)));
+    return record.readUInt32LE(0) === 0x06064b50 ? Number(record.readBigUInt64LE(32)) : 0;
+  } finally {
+    fs.closeSync(handle);
+  }
+}
+
+// One --options string: a second flag silently replaces the first and would drop the encryption. Without UTF-8, names outside the ANSI code page come back as underscores.
+function zipOptions(password: string | undefined): string[] {
+  return password ? ['--options', 'zip:hdrcharset=UTF-8,zip:encryption=aes256', '--passphrase', password] : ['--options', 'zip:hdrcharset=UTF-8'];
 }
 
 // Claude Code names a project folder after its absolute path, every character but an ASCII letter or digit made a hyphen.
@@ -116,8 +187,97 @@ function shipFolders(dir: string): string[] {
     .sort();
 }
 
-// One zip: the manifest and settings from a temp folder, then the ships straight from the crew home. Never a member folder.
-export function backup(config: Config, options: BackupOptions, log: (line: string) => void = console.log): string {
+function trackedByGit(folder: string, name: string): boolean {
+  const result = spawnSync('git', ['-C', folder, 'ls-files', '--', name], { encoding: 'utf8', windowsHide: true });
+  return result.status === 0 && result.stdout.trim() !== '';
+}
+
+// Every project .claude, a CLAUDE.md git will not bring back, and the main setup's skills, agents, commands and CLAUDE.md.
+// With a stage folder they are copied there, links resolved; without one they are only measured.
+function gatherContext(config: Config, skip: string[], stage: string | null): { context: BackupContext; stats: CopyStats } {
+  const at = (...parts: string[]) => (stage ? path.join(stage, 'context', ...parts) : null);
+  const folders = knownFolders(config);
+  const roots = findRoots(folders, skip).map((root, index) => ({ id: `r${index + 1}`, path: root }));
+  const notStage = stage ? [...skip, fs.realpathSync.native(stage)] : skip; // --to may sit inside a .claude
+  const main = mainClaudeDir();
+  const skills = skillNames(path.join(main, 'skills'));
+  const trees: [string, string | null][] = [
+    ...roots.map((root): [string, string | null] => [path.join(root.path, '.claude'), at('roots', root.id, '.claude')]),
+    ...skills.map((name): [string, string | null] => [path.join(main, 'skills', name), at('main', 'skills', name)]),
+    ...['agents', 'commands'].filter((name) => fs.existsSync(path.join(main, name))).map((name): [string, string | null] => [path.join(main, name), at('main', name)]),
+  ];
+
+  const measure = { ...emptyStats(), quick: true };
+  for (const [from] of trees) copyTree(from, null, measure, notStage);
+  const bar = progress(stage ? 'Copying' : 'Reading');
+  let done = 0;
+  const stats: CopyStats = {
+    ...emptyStats(),
+    onFile: (bytes) => {
+      done += bytes;
+      bar.update(done, measure.bytes, `${formatSize(done)} of ${formatSize(measure.bytes)}`);
+    },
+  };
+  for (const [from, to] of trees) copyTree(from, to, stats, notStage);
+  bar.end();
+
+  const notes: [string, string | null][] = roots.map((root) => [path.join(root.path, 'CLAUDE.md'), at('roots', root.id, 'CLAUDE.md')]);
+  notes.push([path.join(main, 'CLAUDE.md'), at('main', 'files', 'CLAUDE.md')]);
+  for (const [file, target] of notes) {
+    if (!fs.statSync(file, { throwIfNoEntry: false })?.isFile() || trackedByGit(path.dirname(file), 'CLAUDE.md')) continue;
+    if (target) {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(file, target);
+    }
+    stats.files++;
+    stats.bytes += fs.statSync(file).size;
+  }
+
+  const checking = progress('Checking repos');
+  const repos = findRepos([...folders, ...roots.map((root) => root.path)], skip, (index, total) => checking.update(index, total, `${index} of ${total}`));
+  checking.end();
+  return { context: { roots, repos, skills, plugins: installedPlugins() }, stats };
+}
+
+function reportContext({ context, stats }: { context: BackupContext; stats: CopyStats }, encrypted: boolean, log: (line: string) => void): void {
+  log(say('info', `${context.roots.length} project .claude folders and ${context.skills.length} skills: ${stats.files} files, ${formatSize(stats.bytes)}`));
+  const largest = [...stats.folders].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (largest.length > 0) {
+    log(say('info', 'Largest (leave one out with --skip <folder>):'));
+    for (const [folder, bytes] of largest) log(`  ${formatSize(bytes).padStart(10)}  ${folder}`);
+  }
+  if (stats.withheld.length > 0) {
+    log(say('info', `${stats.withheld.length} login or key files stayed behind: ${stats.withheld.slice(0, 5).join(', ')}${stats.withheld.length > 5 ? ' and more' : ''}`));
+  }
+  if (stats.left.length > 0) log(say('warn', `Could not read ${stats.left.length}, left out: ${stats.left.slice(0, 5).join(', ')}`));
+  for (const repo of context.repos) {
+    const missing = [
+      ...(repo.remote ? [] : ['no remote']),
+      ...(repo.changed > 0 ? [`${repo.changed} changed files`] : []),
+      ...(repo.unpushed > 0 ? [`${repo.unpushed} unpushed commits`] : []),
+      ...(repo.changed < 0 || repo.unpushed < 0 ? ['git could not check it in time'] : []),
+    ];
+    if (missing.length > 0) log(say('warn', `${repo.path}: ${missing.join(', ')}. Only pushed code comes back on a new machine.`));
+  }
+  if (!encrypted && stats.secrets.length > 0) {
+    const files = [...new Set(stats.secrets.map(({ file }) => file))];
+    log(say('warn', `${files.length} files look like they hold a key (${[...new Set(stats.secrets.map(({ rule }) => rule))].join(', ')}). Add --password to encrypt the backup:`));
+    for (const file of files.slice(0, 10)) log(`  ${file}`);
+    if (files.length > 10) log(`  and ${files.length - 10} more`);
+  }
+}
+
+// One zip: the manifest, settings and context from a stage folder, then the ships straight from the crew home. Never a member folder.
+export async function backup(config: Config, options: BackupOptions, log: (line: string) => void = console.log): Promise<string> {
+  for (const folder of options.skip ?? []) if (!fs.existsSync(folder)) log(say('warn', `--skip ${folder}: no such folder.`));
+  const skip = (options.skip ?? []).filter((folder) => fs.existsSync(folder)).map((folder) => fs.realpathSync.native(folder));
+  if (options.dryRun) {
+    const withKeys = shipFolders(shipsDir()).filter((ship) => Object.keys(servers(path.join(shipsDir(), ship, 'mcp.json')) ?? {}).length > 0);
+    if (withKeys.length > 0) log(say('warn', `The backup holds the MCP servers of ${withKeys.join(', ')} with their keys in plain text. Add --password to encrypt it.`));
+    reportContext(gatherContext(config, skip, null), Boolean(options.password), log);
+    log(say('info', 'Dry run: nothing written.'));
+    return '';
+  }
   const tar = tarPath();
   const now = options.now ?? new Date();
   const folder = path.resolve(options.to ?? '.');
@@ -134,16 +294,24 @@ export function backup(config: Config, options: BackupOptions, log: (line: strin
       ...(member.effort ? { effort: member.effort } : {}),
     };
   }
-  const manifest: Manifest = { format: 1, crewrota: options.version, created: now.toISOString(), platform: process.platform, home: os.homedir(), ships, members };
+  const manifest: Manifest = { format: 2, crewrota: options.version, created: now.toISOString(), platform: process.platform, home: os.homedir(), ships, members };
   const withServers = ships.filter((ship) => Object.keys(servers(path.join(shipsDir(), ship, 'mcp.json')) ?? {}).length > 0);
 
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrota-backup-'));
+  // Beside the zip, not in the system temp folder: the context can be gigabytes and the zip's drive has to hold them anyway.
+  const temp = fs.mkdtempSync(path.join(folder, '.crew-stage-'));
+  let gathered: { context: BackupContext; stats: CopyStats } | null = null;
   try {
+    if (options.context !== false) {
+      gathered = gatherContext(config, skip, temp);
+      manifest.context = gathered.context;
+    }
     fs.writeFileSync(path.join(temp, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     if (fs.existsSync(configFile())) fs.copyFileSync(configFile(), path.join(temp, 'config.json'));
     else fs.writeFileSync(path.join(temp, 'config.json'), JSON.stringify(config, null, 2) + '\n');
+    const contextArgs = fs.existsSync(path.join(temp, 'context')) ? ['context'] : [];
     const shipArgs = ships.length > 0 ? ['-C', crewHome(), 'ships'] : [];
-    runTar(tar, ['-a', '-c', '-f', file, ...passphrase(options.password), '-C', temp, 'manifest.json', 'config.json', ...shipArgs]);
+    const entries = 2 + (contextArgs.length > 0 ? countEntries(path.join(temp, 'context')) : 0) + (ships.length > 0 ? countEntries(shipsDir()) : 0);
+    await runTar(tar, ['-a', '-c', '-f', file, ...zipOptions(options.password), '-C', temp, 'manifest.json', 'config.json', ...contextArgs, ...shipArgs], 'Zipping', entries);
   } catch (error) {
     if (lstatOrNull(file)) fs.unlinkSync(file);
     throw error;
@@ -157,6 +325,7 @@ export function backup(config: Config, options: BackupOptions, log: (line: strin
   const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   log(say('ok', `Backup written: ${file}`));
   log(say('info', `${formatSize(fs.statSync(file).size)}, ${count(ships.length, 'ship')}, ${count(Object.keys(members).length, 'member')}${options.password ? ', encrypted' : ''}`));
+  if (gathered) reportContext(gathered, Boolean(options.password), log);
   log(say('info', 'No login is in it: after a restore, each member signs in again with crew login <member>.'));
   return file;
 }
@@ -179,6 +348,7 @@ function remapProjects(dir: string, remaps: [string, string][], renamed: Map<str
     const match = remapName(name, remaps);
     if (!match) continue;
     const [from, to] = match;
+    if (to.length > 200) console.log(say('warn', `${to.slice(0, 60)}... is over 200 characters. Claude Code shortens such a name with its own hash, so that project's history will not be found there. Pick a shorter folder with --map.`));
     const source = path.join(dir, name);
     const target = path.join(dir, to);
     if (lstatOrNull(target)) {
@@ -202,8 +372,107 @@ function discardExtract(dir: string, log: (line: string) => void): void {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+function mergeInto(from: string, to: string, total: ImportCount, mode: 'keep' | 'replace' = 'keep'): void {
+  if (fs.statSync(from, { throwIfNoEntry: false })?.isDirectory()) importFolder(from, to, total, mode);
+}
+
+function isBelow(file: string, folders: string[]): boolean {
+  return folders.some((folder) => file === folder || file.startsWith(folder + path.sep));
+}
+
+// The main setup is added to, never overwritten. A skill that is a link here stays as it is.
+function restoreMain(context: string, log: (line: string) => void): void {
+  const main = mainClaudeDir();
+  const total: ImportCount = { copied: 0, updated: 0, kept: 0, skipped: 0 };
+  const skills = path.join(context, 'main', 'skills');
+  const names = fs.existsSync(skills) ? fs.readdirSync(skills) : [];
+  for (const name of names) {
+    const target = path.join(main, 'skills', name);
+    if (lstatOrNull(target)?.isSymbolicLink()) {
+      log(say('info', `Skill ${name} is a link here, left alone.`));
+      continue;
+    }
+    importFolder(path.join(skills, name), target, total, 'keep');
+  }
+  mergeInto(path.join(context, 'main', 'agents'), path.join(main, 'agents'), total);
+  mergeInto(path.join(context, 'main', 'commands'), path.join(main, 'commands'), total);
+  mergeInto(path.join(context, 'main', 'files'), main, total);
+  log(say('ok', `Main setup (${names.length} skills): ${total.copied} copied, ${total.updated} brought up to date, ${total.skipped} already there, ${total.kept} kept beside a changed copy`));
+}
+
+// Clones first when asked, so a restored .claude lands in the checkout rather than blocking the clone.
+function restoreContext(manifest: Manifest, context: string, options: RestoreOptions, log: (line: string) => void): void {
+  const saved = manifest.context as BackupContext;
+  restoreMain(context, log);
+
+  const place = (folder: string) => mapFolder(folder, options.maps, manifest.platform, manifest.home);
+  const total: ImportCount = { copied: 0, updated: 0, kept: 0, skipped: 0 };
+  const waiting: string[] = [];
+  const fresh: string[] = [];
+  for (const repo of saved.repos ?? []) {
+    const folder = place(repo.path);
+    if (!folder) {
+      waiting.push(repo.path);
+      continue;
+    }
+    if (!repo.remote) {
+      log(say('warn', `${folder} had no remote, so its code is not coming back.`));
+      continue;
+    }
+    if (fs.existsSync(path.join(folder, '.git'))) continue;
+    if (!options.clone) {
+      log(say('info', `Code not here yet: ${folder} (${repo.remote}). Add --clone to fetch it.`));
+      continue;
+    }
+    const empty = !fs.existsSync(folder) || fs.readdirSync(folder).length === 0;
+    // What this machine already had stays on top of the clone; git shows any difference from the remote.
+    const result = cloneRepo(repo.remote, folder, repo.branch, (from, to) => importFolder(from, to, total, 'replace'));
+    if (result === 'cloned') {
+      log(say('ok', `Cloned ${repo.remote} into ${folder}`));
+      if (empty) fresh.push(folder);
+    }
+    if (result === 'failed') log(say('warn', `Could not clone ${repo.remote} into ${folder}. Its .claude still comes back; run this again once you have access.`));
+    if (result === 'in-the-way') log(say('warn', `${folder} already holds other files, so ${repo.remote} was not cloned.`));
+  }
+
+  let placed = 0;
+  const roots = saved.roots ?? [];
+  const bar = progress('Putting back');
+  for (const [index, root] of roots.entries()) {
+    bar.update(index, roots.length, root.path);
+    const folder = place(root.path);
+    if (!folder) {
+      waiting.push(root.path);
+      continue;
+    }
+    const stage = path.join(context, 'roots', root.id);
+    // Only .claude and CLAUDE.md are ever written into a project folder. In a clone made just now, the backup's latest edit wins.
+    const mode = isBelow(folder, fresh) ? 'replace' : 'keep';
+    mergeInto(path.join(stage, '.claude'), path.join(folder, '.claude'), total, mode);
+    if (fs.existsSync(path.join(stage, 'CLAUDE.md'))) {
+      const notes = path.join(stage, 'notes');
+      fs.mkdirSync(notes);
+      fs.renameSync(path.join(stage, 'CLAUDE.md'), path.join(notes, 'CLAUDE.md'));
+      importFolder(notes, folder, total, mode);
+    }
+    placed++;
+  }
+  bar.end();
+  log(say('ok', `Project .claude folders (${placed}): ${total.copied} copied, ${total.updated} brought up to date, ${total.skipped} already there, ${total.kept} kept beside a changed copy`));
+  const noPlace = [...new Set(waiting)];
+  if (noPlace.length > 0) {
+    log(say('warn', `${noPlace.length} folders have no place on this machine. Run this again with --map <old>=<new>:`));
+    for (const folder of noPlace.slice(0, 10)) log(`  ${folder}`);
+    if (noPlace.length > 10) log(`  and ${noPlace.length - 10} more`);
+  }
+  if ((saved.plugins ?? []).length > 0) {
+    log(say('info', 'Plugins are installed from their marketplaces, not from a backup. Those you had:'));
+    for (const plugin of saved.plugins) log(`  claude plugin install ${plugin}`);
+  }
+}
+
 // Ships merged in, missing members re-created without a login, project folders renamed to this machine's paths.
-export function restore(config: Config, zip: string, options: RestoreOptions, log: (line: string) => void = console.log): string[] {
+export async function restore(config: Config, zip: string, options: RestoreOptions, log: (line: string) => void = console.log): Promise<string[]> {
   const file = path.resolve(zip);
   if (!fs.statSync(file, { throwIfNoEntry: false })?.isFile()) throw new Error(`${zip} is not a file`);
   if (!options.password && zipEncrypted(file)) throw new Error(`${zip} is encrypted. Add --password.`);
@@ -214,7 +483,7 @@ export function restore(config: Config, zip: string, options: RestoreOptions, lo
   fs.mkdirSync(extract);
   try {
     try {
-      runTar(tar, ['-x', '-f', file, '-C', extract, ...(options.password ? ['--passphrase', options.password] : [])]);
+      await runTar(tar, ['-x', '-f', file, '-C', extract, ...(options.password ? ['--passphrase', options.password] : [])], 'Unpacking', zipEntryCount(file));
     } catch (error) {
       if (/passphrase/i.test((error as Error).message)) throw new Error(options.password ? `The password does not open ${zip}.` : `${zip} is encrypted. Add --password.`);
       throw error;
@@ -223,7 +492,7 @@ export function restore(config: Config, zip: string, options: RestoreOptions, lo
     if (links.length > 0) throw new Error(`The backup holds a link (${path.relative(extract, links[0])}), so crewrota restored nothing from it.`);
     const manifest = readJson(path.join(extract, 'manifest.json')) as Manifest | null;
     if (!manifest) throw new Error(`${zip} is not a crewrota backup: it has no manifest.json.`);
-    if (manifest.format !== 1) throw new Error(`${zip} has backup format ${manifest.format}; this crewrota reads format 1. Update crewrota and try again.`);
+    if (manifest.format !== 1 && manifest.format !== 2) throw new Error(`${zip} has backup format ${manifest.format}; this crewrota reads formats 1 and 2. Update crewrota and try again.`);
 
     const extractShips = path.join(extract, 'ships');
     const ships = shipFolders(extractShips);
@@ -234,7 +503,8 @@ export function restore(config: Config, zip: string, options: RestoreOptions, lo
       if (member.ship) checkName('ship', member.ship);
     }
 
-    const remaps: [string, string][] = options.maps.map(([from, to]) => [projectSlug(from), projectSlug(to)]);
+    const bare = (folder: string) => folder.replace(/[\\/]+$/, ''); // E:\ and E: are the same map
+    const remaps: [string, string][] = options.maps.map(([from, to]) => [projectSlug(bare(from)), projectSlug(bare(to))]);
     if (manifest.home) remaps.push([projectSlug(manifest.home), projectSlug(os.homedir())]);
     const useful = remaps.filter(([from, to], at) => from !== to && remaps.findIndex(([other]) => other === from) === at);
     const renamed = new Map<string, number>();
@@ -302,6 +572,8 @@ export function restore(config: Config, zip: string, options: RestoreOptions, lo
       }
     }
     saveConfig(config);
+
+    if (manifest.context) restoreContext(manifest, path.join(extract, 'context'), options, log);
 
     log('');
     log(say('ok', `Restored ${ships.length} ship${ships.length === 1 ? '' : 's'} and ${created.length} member${created.length === 1 ? '' : 's'} from ${zip}`));

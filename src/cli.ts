@@ -84,10 +84,13 @@ Usage:
   crew ship mcp remove <ship> <name>           remove one
   crew ship import <ship> --from <folder>      copy history, memory and session folders into the ship (a ccs context
                                                group folder works); run it again to add what is new
-  crew backup [--to <folder>] [--password]     one zip of the ships, member list, settings and ship MCP servers; never a login
-  crew restore <zip> [--map <old>=<new>]... [--password]
-                                               bring a backup back: ships merged, members re-created, project folders
-                                               renamed to this machine's paths; then crew login <member> for each
+  crew backup [--to <folder>] [--password] [--skip <folder>]... [--no-context] [--dry-run]
+                                               one zip of the ships, member list, settings, ship MCP servers, every project
+                                               .claude (tasks, memories, skills) and the main skills; never a login
+  crew restore <zip> [--map <old>=<new>]... [--password] [--clone]
+                                               bring a backup back: ships merged, members re-created, .claude folders and
+                                               skills added, project folders renamed to this machine's paths, repos cloned
+                                               with --clone; then crew login <member> for each
   crew config permissions on|off               start sessions with --dangerously-skip-permissions or not
   crew config refresh on|off                   read every member's usage with quota-axi as the menu opens (no message; on by default)
   crew config lavish on|off                    add the plugin's Lavish rule at every session start, or stop that (on by default)
@@ -700,10 +703,21 @@ async function askPassword(twice: boolean): Promise<string> {
 }
 
 async function backupCommand(args: string[]): Promise<number> {
-  const { positional, flags } = parseArgs(args, ['--to'], ['--password']);
-  if (positional.length > 0) usage('crew backup [--to <folder>] [--password]');
-  const secret = flags['--password'] ? await askPassword(true) : undefined;
-  backup(loadConfig(), { to: stringFlag(flags['--to']), password: secret, version: version() });
+  const skip: string[] = [];
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== '--skip') {
+      rest.push(args[i]);
+      continue;
+    }
+    const value = args[++i];
+    if (!value) throw new Error('--skip needs a folder.');
+    skip.push(value);
+  }
+  const { positional, flags } = parseArgs(rest, ['--to'], ['--password', '--no-context', '--dry-run']);
+  if (positional.length > 0) usage('crew backup [--to <folder>] [--password] [--skip <folder>]... [--no-context] [--dry-run]');
+  const secret = flags['--password'] && !flags['--dry-run'] ? await askPassword(true) : undefined;
+  await backup(loadConfig(), { to: stringFlag(flags['--to']), password: secret, version: version(), skip, context: !flags['--no-context'], dryRun: Boolean(flags['--dry-run']) });
   return 0;
 }
 
@@ -720,10 +734,10 @@ async function restoreCommand(args: string[]): Promise<number> {
     if (cut < 1 || cut === value.length - 1) throw new Error('--map takes <old folder>=<new folder>.');
     maps.push([value.slice(0, cut), value.slice(cut + 1)]);
   }
-  const { positional, flags } = parseArgs(rest, [], ['--password']);
-  if (positional.length !== 1) usage('crew restore <zip> [--map <old>=<new>]... [--password]');
+  const { positional, flags } = parseArgs(rest, [], ['--password', '--clone']);
+  if (positional.length !== 1) usage('crew restore <zip> [--map <old>=<new>]... [--password] [--clone]');
   const secret = flags['--password'] ? await askPassword(false) : undefined;
-  restore(loadConfig(), positional[0], { maps, password: secret });
+  await restore(loadConfig(), positional[0], { maps, password: secret, clone: Boolean(flags['--clone']) });
   return 0;
 }
 

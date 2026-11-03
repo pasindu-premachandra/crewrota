@@ -51,8 +51,8 @@ The short version is in the [README](../README.md).
 | `crew ship delete <ship> [--force] [--yes]` | Move a ship's folder to `removed/` (refuses while members are aboard unless `--force`) |
 | `crew ship join <member> <ship>` | Share `<member>`'s history through `<ship>`; its existing history is copied in |
 | `crew ship leave <member>` | Make `<member>` isolated again; the ship keeps its files |
-| `crew backup [--to <folder>] [--password]` | One zip of every ship (history, memory, session folders, MCP servers), the member list and the remembered settings; never a login |
-| `crew restore <zip> [--map <old>=<new>]... [--password]` | Bring a backup back: ships merged in, missing members re-created, project folders renamed to this machine's paths; then `crew login <member>` for each |
+| `crew backup [--to <folder>] [--password] [--skip <folder>]... [--no-context] [--dry-run]` | One zip of every ship (history, memory, session folders, MCP servers), the member list, the remembered settings, every project `.claude` (tasks, memories, skills) and your main skills; never a login |
+| `crew restore <zip> [--map <old>=<new>]... [--password] [--clone]` | Bring a backup back: ships merged in, missing members re-created, `.claude` folders and skills added, project folders renamed to this machine's paths, repos cloned with `--clone`; then `crew login <member>` for each |
 | `crew config permissions on\|off` | Start sessions with `--dangerously-skip-permissions`, or not |
 | `crew config refresh on\|off` | Read every member's usage with quota-axi as the menu opens; no message is sent (on by default) |
 | `crew config lavish on\|off` | Add the plugin's Lavish rule at every session start, or stop that (on by default) |
@@ -142,18 +142,39 @@ crew backup --password
 crew restore crewrota-backup-20261026-0905.zip --password
 ```
 
-`crew backup` writes one zip in the current folder (or `--to <folder>`): every ship with its history, memory, session folders and MCP servers, the member list with each member's ship, model and effort, and the remembered settings.
+`crew backup` writes one zip in the current folder (or `--to <folder>`): every ship with its history, memory, session folders and MCP servers, the member list with each member's ship, model and effort, the remembered settings, your project `.claude` folders and your main skills.
 Logins are never in it: after `crew restore`, sign each member in again with `crew login <member>`, and the restore prints that line for every member it made.
 `crew restore` merges the ships into the ones you have, re-creates the members you are missing, and leaves your existing members and settings alone.
 Claude Code files each session under its project's full folder path, so the restore renames those folders when your home folder differs on the new machine.
 For projects that moved elsewhere, add `--map <old folder>=<new folder>`, for example `--map E:\Projects=D:\work`; it renames that folder and every folder below it, and you can repeat it.
-The zip holds your transcripts and the ships' MCP keys in plain text, so use `--password` to encrypt it with AES-256; without a terminal crewrota reads the password from `CREWROTA_BACKUP_PASSWORD`.
+The zip holds your transcripts, task notes and the ships' MCP keys in plain text, so use `--password` to encrypt it with AES-256; without a terminal crewrota reads the password from `CREWROTA_BACKUP_PASSWORD`. File and folder names inside the zip stay readable even with a password.
 The zip is written and read by bsdtar, which Windows 10 and 11 and macOS already have; on Linux install `libarchive-tools`.
+
+### Project `.claude` folders and skills
+
+You do not list anything. `crew backup` reads the folders Claude Code has worked in from your transcripts and `.claude.json` files, then takes every `.claude` in those folders and above them, and looks up to six levels below the top-most of them. A git repo you worked in that has no `.claude` at its top is looked through the same way.
+
+- **Goes in:** each project's `.claude` (tasks with their evidence, memories, skills, rules), a `CLAUDE.md` beside it that git does not track, and from `~/.claude` the skills, agents, commands and `CLAUDE.md`. Linked skills are stored as real files.
+- **Stays behind:** logins and keys by file name (`.credentials*`, `.env` and `.env.*` other than `.env.example`, `.env.sample` and `.env.template`, `*.pem`, `*.key`, `id_rsa*` and similar), `settings.local.json`, `node_modules`, `.git`, `worktrees`, linked git worktrees, `~/.claude/settings.json`, `~/.claude/skills/synced` (Claude Code downloads it again for each account), `.trash`, any folder in `skills` with no `SKILL.md`, and the history of a member that is on no ship. Your plugins are listed by the restore, with the command to install each one.
+- **Progress:** in a terminal, a bar shows each long step (copying, zipping, unpacking, putting files back) with how far it has got; piped output stays plain.
+- **Check first:** `crew backup --dry-run` prints the same report and writes nothing. The report names the largest task folders, any file that looks like it holds a key (the check is best effort; it never prints the value), and every repo with changes or commits that are not pushed, since only pushed code comes back.
+- **Leave things out:** `--skip <folder>` drops a project or any folder inside a `.claude`, and you can repeat it. `--no-context` writes only the ships, members and settings.
+
+On the new machine, `crew restore` adds the skills to `~/.claude` and each `.claude` to its project folder. Your files are never overwritten: the same file is skipped, and a file that differs arrives beside yours as `<name>.incoming-1`, which you can compare and delete. A restore run over your own edits can leave such a copy even when only your side changed.
+A folder whose drive does not exist on the new machine is named, and waits for `--map`.
+
+To get the code as well, add `--clone`: each repo is cloned from its `origin`, and its `.claude` is laid over the clone, so you can pick a task up from its notes straight away. A tracked `.claude` file that differs from the remote shows as modified in `git status`, so nothing is hidden. It uses your own git login, and you can run the restore again at any time, with or without `--clone` the first time; a repo that is already there is left alone, and a folder that holds other files is not cloned into.
+
+```
+crew restore crewrota-backup-20261026-0905.zip --password --clone --map E:\Projects=D:\work
+```
+
+A `.claude` can hold hooks and settings that run on your machine, so restore only a backup you made yourself.
 
 ## Your main setup in every member
 
 Before every launch crew links each member's `skills`, `agents` and `commands` to the ones in `~/.claude`, gives it a `plugins` folder whose cache, data and marketplaces are links to yours (the layout ccs uses), and copies `~/.claude/settings.json` and `~/.claude/CLAUDE.md` into it.
-It only reads your main setup; it never writes to `~/.claude` or `~/.claude.json`.
+It only reads your main setup; the one command that writes to `~/.claude` is `crew restore`, which adds skills, agents, commands and `CLAUDE.md` without overwriting anything. Nothing writes to `~/.claude.json`.
 
 MCP servers come from the member's ship: `crew ship mcp list|add|remove <ship> ...` manages them, kept in that ship's `mcp.json` beside the logins, and a new ship starts with a copy of the ones in `~/.claude.json`.
 A member with no ship gets the ones in `~/.claude.json`.

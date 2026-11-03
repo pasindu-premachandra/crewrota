@@ -3,7 +3,7 @@
 crewrota is a Node/TypeScript CLI (`crewrota`, `crw`, `crew`) that runs Claude Code as one of the user's crew members.
 A crew member is one Claude login in its own config folder (`CLAUDE_CONFIG_DIR`), logged in through Claude Code's own first-run login (plain `claude` in the member folder; `claude auth login` only with `--email`/`--sso`); a ship is the `projects/` and session folders several members share through links, plus the ship's own MCP servers.
 crewrota owns the member folders, the ships, the menu, the remembered model and effort, the skip-permissions answer and the shared items from the main setup.
-Stable (1.0.3), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
+Stable (1.0.4), MIT; the npm package `crewrota` ships `dist/` (no tests), `templates/` and `widget/` (`files` in `package.json`), and the plugin installs from the GitHub repo `pasindu-premachandra/crewrota`. Personal venture under `E:\Projects\startup`; that folder's `CLAUDE.md` applies.
 
 ## Layout
 
@@ -14,6 +14,7 @@ src/menu.ts       the one-screen crew menu (@clack/core), crew quota's lines, an
 src/launch.ts     builds the claude argv, heals links, starts claude in the member folder
 src/ships.ts      ships: join, heal, leave, rename
 src/backup.ts     crew backup and crew restore: one zip through bsdtar, the project slug and remap rule, the tar runner
+src/context.ts    what a backup carries beyond the ships: finds project .claude folders and repos from transcripts, copies with links resolved, key checks, folder mapping, clone
 src/shared.ts     shared items from the main ~/.claude: links, copies, mcpServers
 src/links.ts      link helpers, folder moves to removed/, session file counts
 src/rows.ts       member rows for the menu and list, quota.json readings
@@ -63,12 +64,12 @@ Try the CLI without real accounts: set `CREWROTA_CLAUDE=src/test/fixtures/fake-c
 - Every member links `skills`, `agents`, `commands` and the `cache`, `data` and `marketplaces` of `plugins/` to `~/.claude`, and gets copies of `settings.json`, `CLAUDE.md` and the plugin lists; `known_marketplaces.json` is copied with its paths pointed at the member, as ccs does.
 - Email and organisation come from `oauthAccount.emailAddress`, `organizationName` and `organizationUuid` in the member's `.claude.json`.
 - Settings are keyed by member name.
-- Backups: `crew backup` and `crew restore` run bsdtar, never the `tar` on PATH on Windows (Git Bash's is GNU tar, which cannot write a zip): `%SystemRoot%\System32\tar.exe` there, else `bsdtar` or a `tar` whose `--version` names bsdtar (Linux: `libarchive-tools`); `CREWROTA_TAR` points at another. A password adds AES-256 zip encryption. Logins and member folders are never in a backup.
+- Backups: `crew backup` and `crew restore` run bsdtar, never the `tar` on PATH on Windows (Git Bash's is GNU tar, which cannot write a zip): `%SystemRoot%\System32\tar.exe` there, else `bsdtar` or a `tar` whose `--version` names bsdtar (Linux: `libarchive-tools`); `CREWROTA_TAR` points at another. A password adds AES-256 zip encryption. Every zip option goes in one `--options` string, since a second flag silently replaces the first and drops the encryption. Logins and member folders are never in a backup.
 
 ## Hard rules
 
 - Never read, copy or print a credential file: any `.credentials.json`, `.env*`.
-- Never write to the main `~/.claude` or `~/.claude.json`; they are read only, for the shared items.
+- Never write to the main `~/.claude` or `~/.claude.json`; they are read only, for the shared items. One exception: `crew restore` adds skills, agents, commands and `CLAUDE.md` to `~/.claude` through the import rule, never overwriting.
 - Tests never call the real `claude` or the real quota-axi. Use the fakes (`CREWROTA_CLAUDE`, `CREWROTA_QUOTA_AXI`) or an injected runner, and call `isolate()` from `src/test/helpers.ts` so HOME, USERPROFILE, APPDATA, XDG_CONFIG_HOME and CREWROTA_HOME point at temp folders.
 - Never a recursive delete through a link. Members and ships are moved to `removed/` after their links are unlinked; only a folder crewrota made moments ago in a failed creation, with no link in it, is deleted.
 - No em dash and no en dash anywhere; plain hyphens.

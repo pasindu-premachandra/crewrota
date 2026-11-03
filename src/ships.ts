@@ -47,13 +47,15 @@ function startsWith(file: string, prefix: string): boolean {
 
 // New files are copied; the same file is skipped; a transcript that only grew in the source is brought up to date;
 // a file changed on both sides arrives beside it as <name>.incoming-<n><ext>, so nothing is overwritten.
-export function importFolder(from: string, to: string, count: ImportCount): void {
+// 'keep' is for notes: a shorter file here may be an edit, so only 'transcript' treats a longer source as newer.
+// 'replace' is only for a checkout made moments ago, where git still holds what it replaces.
+export function importFolder(from: string, to: string, count: ImportCount, mode: 'transcript' | 'keep' | 'replace' = 'transcript'): void {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
     const source = path.join(from, entry.name);
     const target = path.join(to, entry.name);
     if (entry.isDirectory()) {
-      importFolder(source, target, count);
+      importFolder(source, target, count, mode);
       continue;
     }
     if (!entry.isFile()) continue;
@@ -66,7 +68,7 @@ export function importFolder(from: string, to: string, count: ImportCount): void
     const size = fs.statSync(source).size;
     if (there.size === size && fs.readFileSync(target).equals(fs.readFileSync(source))) {
       count.skipped++;
-    } else if (size > there.size && startsWith(source, target)) {
+    } else if (mode === 'replace' || (mode === 'transcript' && size > there.size && startsWith(source, target))) {
       fs.copyFileSync(source, target);
       count.updated++;
     } else {
