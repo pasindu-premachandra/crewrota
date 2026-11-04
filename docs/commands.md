@@ -1,183 +1,141 @@
-# crewrota commands and reference
+---
+title: "crewrota commands"
+description: "Every crewrota command on one screen, each linked to its full reference with flags, defaults, output and exit codes."
+sidebar:
+  order: 0
+  label: "All commands"
+---
 
-Every command, the default tools, where files live, backups and how members get your main setup.
-The short version is in the [README](../README.md).
+`crew`, `crw` and `crewrota` are the same command.
+This page lists every command with one line on what it does; each command links to its reference, which has the flags, defaults, real output, exit codes and what needs a terminal.
+`crew --help` prints the same list in your terminal.
 
-## Contents
-
-- [Commands](#commands)
-- [What it looks like](#what-it-looks-like)
-- [The default tools: crew setup](#the-default-tools-crew-setup)
-- [The Claude Code plugin: firstmate and the Lavish rule](#the-claude-code-plugin-firstmate-and-the-lavish-rule)
-- [Where things live](#where-things-live)
-- [Moving to a new machine](#moving-to-a-new-machine)
-- [Your main setup in every member](#your-main-setup-in-every-member)
-
-## Commands
-
-`crw` and `crewrota` do exactly what `crew` does.
+## Start Claude as a member
 
 | Command | What it does |
 |---|---|
-| `crew` | Menu: pick a member (or add one), its ship, a model and an effort on one screen, then launch Claude Code as that member |
-| `crew use <member>` | Make `<member>` the current one; if it does not exist, crew offers to create it |
-| `crew use -` | Go back to the previous member |
-| `crew add <member> [--ship <s>] [--email <e>] [--sso]` | Create a member and log it in with Claude Code's own login |
-| `crew run [<member>] [-- <args>]` | Launch Claude as `<member>`, else `$CREW_MEMBER`, else the current member; arguments after `--` go to Claude |
-| `crew <member> [-- <args>]` | The same as `crew run <member>`: the member's saved model, effort and ship |
-| `crew list` or `crew ls` | Members with `*` on the current one, ship, usage, email and organisation |
-| `crew whoami` | The current member: folder, ship, email, organisation, logged in or not |
-| `crew statusline` | The status line crewrota gives members without one: saves the session's usage to `quota.json` and prints one line |
-| `crew quota` | Every member's 5-hour and week use as bars, read fresh with quota-axi first unless `crew config refresh off` |
-| `crew quota --format menubar` | The same in the SwiftBar and xbar text format, read from each member's last reading without checking usage; `widget/crewrota.1m.sh` runs it in the macOS menu bar (beta) |
-| `crew warmup [<member>...]` | Send every member (or the ones named) one short Haiku message, which starts its 5-hour window if none is running, then show the bars |
-| `crew widget` | Open the quota widget: every member's bars in a small always-on-top window, with today's token count across the crew, the clock, a button that warms up every member and a coding-music link (needs Python 3 with Tk) |
-| `crew widget close` | Close it |
-| `crew widget startup on\|off` | Open the widget at login, or stop that (Windows) |
-| `crew current` | The current member's name only (exit code 1 when there is none) |
-| `crew login <member>`, `crew logout <member>` | Log a member in or out again; its folder stays |
-| `crew rename <old> <new>` | Rename a member |
-| `crew drop <member> [--force] [--yes]` | Drop a member: its folder moves to `removed/` (refuses the current member unless `--force`); `crew remove` works too |
-| `crew shortcut add <name> --member <m> [--folder <path>] [--hotkey <keys>]` | A VS Code shortcut: a workspace file that opens the folder (the current one by default) and runs `crew <m>` there; on Windows also a Start Menu entry, with an optional hotkey such as `CTRL+ALT+C` |
-| `crew shortcut list` | The shortcuts with their member, folder and hotkey |
-| `crew shortcut set <name> [--member <m>] [--folder <path>] [--hotkey <keys>\|--no-hotkey]` | Change only the given parts of a shortcut and write its files again |
-| `crew shortcut remove <name>` | Delete a shortcut's workspace file and Start Menu entry |
-| `crew shortcut open <name>` | Open a shortcut in VS Code |
-| `crew ship create <ship>` | Make an empty ship |
-| `crew ship list` | Ships and their members |
-| `crew ship rename <old> <new>` | Rename a ship; its members follow |
-| `crew ship mcp list\|add\|remove <ship> ...` | The ship's MCP servers, which its members get at launch |
-| `crew ship import <ship> --from <folder>` | Copy history, memory and session folders into the ship (a ccs context group folder works); run it again to add what is new |
-| `crew ship delete <ship> [--force] [--yes]` | Move a ship's folder to `removed/` (refuses while members are aboard unless `--force`) |
-| `crew ship join <member> <ship>` | Share `<member>`'s history through `<ship>`; its existing history is copied in |
-| `crew ship leave <member>` | Make `<member>` isolated again; the ship keeps its files |
-| `crew backup [--to <folder>] [--password] [--skip <folder>]... [--no-context] [--dry-run]` | One zip of every ship (history, memory, session folders, MCP servers), the member list, the remembered settings, every project `.claude` (tasks, memories, skills) and your main skills; never a login |
-| `crew restore <zip> [--map <old>=<new>]... [--password] [--clone]` | Bring a backup back: ships merged in, missing members re-created, `.claude` folders and skills added, project folders renamed to this machine's paths, repos cloned with `--clone`; then `crew login <member>` for each |
-| `crew config permissions on\|off` | Start sessions with `--dangerously-skip-permissions`, or not |
-| `crew config refresh on\|off` | Read every member's usage with quota-axi as the menu opens; no message is sent (on by default) |
-| `crew config lavish on\|off` | Add the plugin's Lavish rule at every session start, or stop that (on by default) |
-| `crew config show` | Remembered settings |
-| `crew setup [--yes] [--with-hooks]` | Install the default tools from upstream: one list with each command and where it lands, one yes; anything installed is skipped, never updated |
-| `crew init` | Write the project's root `.claude/` folder into the current folder; never overwrites a file |
-| `crew doctor [--logins]` | Check Node, Claude Code, the folders, every link and each default tool; `--logins` also asks Claude Code whether each member is logged in |
-| `crew --help`, `crew --version` | Help and version |
+| [`crew`](reference/menu-and-run.md#crew-the-menu) | The menu: pick a member, its ship, a model and an effort on one screen, then start Claude Code as that member (needs a terminal) |
+| [`crew run [<member>] [-- <claude args>]`](reference/menu-and-run.md#crew-run) | Start Claude as `<member>`, else `$CREW_MEMBER`, else the current member; arguments after `--` go to Claude |
+| [`crew <member> [-- <claude args>]`](reference/menu-and-run.md#crew-member) | The same as `crew run <member>` |
 
-Member and ship names use lowercase letters, digits and hyphens, start with a letter, and are at most 32 characters.
+## Members
 
-## What it looks like
+| Command | What it does |
+|---|---|
+| [`crew add <member> [--ship <s>] [--email <e>] [--sso]`](reference/members.md#crew-add) | Create a member and log it in with Claude Code's own login (needs a terminal) |
+| [`crew use <member>`](reference/members.md#crew-use) | Make `<member>` the current one; offers to create it if it does not exist |
+| [`crew use -`](reference/members.md#crew-use) | Go back to the previous member |
+| [`crew list`, `crew ls`](reference/members.md#crew-list) | Members with `*` on the current one, ship, last usage reading, email and organisation |
+| [`crew whoami`](reference/members.md#crew-whoami) | The current member: folder, ship, email, organisation, logged in or not |
+| [`crew current`](reference/members.md#crew-current) | The current member's name only; exit code 1 when there is none |
+| [`crew login <member> [--email <e>] [--sso]`](reference/members.md#crew-login) | Log a member in again; its folder stays |
+| [`crew logout <member>`](reference/members.md#crew-logout) | Log a member out; its folder stays |
+| [`crew rename <old> <new>`](reference/members.md#crew-rename) | Rename a member; its shortcuts follow |
+| [`crew drop <member> [--force] [--yes]`](reference/members.md#crew-drop) | Move a member's folder to `removed/`; `crew remove` is the same |
 
-Every member's usage, as bars in the terminal (`crew quota`) or in a small window on your desktop (`crew widget`):
+## Usage
 
-![crew quota: 5-hour and week bars for every member](images/crew-quota.png)
+| Command | What it does |
+|---|---|
+| [`crew quota`](reference/usage.md#crew-quota) | Every member's 5-hour and week use as bars, read fresh with quota-axi first unless `crew config refresh off` |
+| [`crew quota --format menubar`](reference/usage.md#crew-quota---format-menubar) | The same as SwiftBar and xbar text, from each member's last reading; never checks usage |
+| [`crew warmup [<member>...]`](reference/usage.md#crew-warmup) | Send each member (or the ones named) one short Haiku message, then show the bars; the only command that sends a message |
+| [`crew widget`](reference/usage.md#crew-widget) | Open the quota widget, a small always-on-top window (needs Python 3 with Tk) |
+| [`crew widget close`](reference/usage.md#crew-widget-close) | Close it |
+| [`crew widget startup on\|off`](reference/usage.md#crew-widget-startup) | Open the widget at login, or stop that (Windows) |
+| [`crew statusline`](reference/usage.md#crew-statusline) | The status line crewrota gives a member that has none: saves the session's usage to `quota.json` and prints one line |
 
-![The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link](images/crew-widget.png)
+## Ships
 
-Your crew at a glance (`crew list`), and the ships they share (`crew ship list`, `crew ship mcp list <ship>`):
+| Command | What it does |
+|---|---|
+| [`crew ship create <ship>`](reference/ship.md#crew-ship-create) | Make an empty ship: five shared folders and an `mcp.json` |
+| [`crew ship list`](reference/ship.md#crew-ship-list) | Ships and their members |
+| [`crew ship join <member> <ship>`](reference/ship.md#crew-ship-join) | Share `<member>`'s history through `<ship>`; what it had is copied in |
+| [`crew ship leave <member>`](reference/ship.md#crew-ship-leave) | Make `<member>` isolated again; the ship keeps its files |
+| [`crew ship rename <old> <new>`](reference/ship.md#crew-ship-rename) | Rename a ship; its members follow |
+| [`crew ship delete <ship> [--force] [--yes]`](reference/ship.md#crew-ship-delete) | Move a ship's folder to `removed/` |
+| [`crew ship import <ship> --from <folder>`](reference/ship.md#crew-ship-import) | Copy history and session folders from another folder into the ship; run it again to add what is new |
+| [`crew ship mcp list <ship>`](reference/ship.md#crew-ship-mcp-list) | The ship's MCP servers, without their keys |
+| [`crew ship mcp add <ship> <name> --url <url> [--transport <t>] [--header "Name: value"]...`](reference/ship.md#crew-ship-mcp-add) | Add a remote MCP server; `--transport` sets its type (`http` by default) |
+| [`crew ship mcp add <ship> <name> [--env KEY=value]... -- <command> [args]`](reference/ship.md#crew-ship-mcp-add) | Add a local (stdio) MCP server |
+| [`crew ship mcp add <ship> <name> --from <.claude.json>`](reference/ship.md#crew-ship-mcp-add) | Copy one server's definition from another config file |
+| [`crew ship mcp remove <ship> <name>`](reference/ship.md#crew-ship-mcp-remove) | Remove one |
 
-![crew list: each member with its ship, usage, email and organisation](images/crew-list.png)
+At every launch a member's own MCP server list (in its `.claude.json`) is replaced by its ship's list, or by the one in `~/.claude.json` when it is on no ship.
+A server added inside a member with `claude mcp add --scope user` is gone at that member's next launch; add it to the ship instead.
 
-![crew ship list: each ship and its members](images/crew-ship-list.png)
+## VS Code shortcuts
 
-![crew ship mcp list: the MCP servers a ship gives its members](images/crew-ship-mcp.png)
+| Command | What it does |
+|---|---|
+| [`crew shortcut add <name> --member <m> [--folder <path>] [--hotkey <keys>]`](reference/shortcut.md#crew-shortcut-add) | A workspace file that opens the folder in VS Code and runs `crew <m>` there; on Windows also a Start Menu entry with an optional hotkey |
+| [`crew shortcut list`](reference/shortcut.md#crew-shortcut-list) | The shortcuts with their member, folder and hotkey |
+| [`crew shortcut set <name> [--member <m>] [--folder <path>] [--hotkey <keys>\|--no-hotkey]`](reference/shortcut.md#crew-shortcut-set) | Change only the given parts of a shortcut |
+| [`crew shortcut remove <name>`](reference/shortcut.md#crew-shortcut-remove) | Delete a shortcut's workspace file and Start Menu entry |
+| [`crew shortcut open <name>`](reference/shortcut.md#crew-shortcut-open) | Open a shortcut in VS Code |
 
-The status line crewrota gives a member that has none of its own:
+## Backups
 
-![The crewrota status line: model, context, branch, 5-hour and week use, reset, folder and crew member](images/crew-statusline.png)
+| Command | What it does |
+|---|---|
+| [`crew backup [--to <folder>] [--password] [--skip <folder>]... [--no-context] [--dry-run]`](reference/backup-and-restore.md#crew-backup) | One zip of every ship, the member list, the settings, your project `.claude` folders and your main skills; never a login |
+| [`crew restore <zip> [--map <old>=<new>]... [--password] [--clone]`](reference/backup-and-restore.md#crew-restore) | Bring a backup back: ships merged, missing members made again, `.claude` folders and skills added, repos cloned with `--clone` |
 
-The screenshots use a demo crew with example names, accounts and usage.
+## Settings
 
-## The default tools: crew setup
+| Command | What it does |
+|---|---|
+| [`crew config permissions on\|off`](reference/config.md#crew-config-permissions) | Start sessions with `--dangerously-skip-permissions`, or not |
+| [`crew config refresh on\|off`](reference/config.md#crew-config-refresh) | Read every member's usage with quota-axi as the menu and `crew quota` open; no message is sent (on by default) |
+| [`crew config lavish on\|off`](reference/config.md#crew-config-lavish) | The plugin's Lavish rule at every session start (on by default) |
+| [`crew config show`](reference/config.md#crew-config-show) | The remembered settings |
 
-`crew setup` prints one list, each tool with the exact command it runs and where it lands, and asks once.
-Anything already installed is skipped and never updated in place.
-`--yes` skips the question; without a terminal and without `--yes` it refuses.
+## Setup and checks
 
-| Tool | Command | Lands in |
-|---|---|---|
-| lavish skill | `npx skills add kunchenguid/lavish-axi --skill lavish -g` | `~/.claude/skills/lavish` |
-| gh-axi skill | `npx skills add kunchenguid/gh-axi --skill gh-axi -g` | `~/.claude/skills/gh-axi` |
-| quota-axi skill | `npx skills add kunchenguid/quota-axi --skill quota-axi -g` | `~/.claude/skills/quota-axi` |
-| treehouse | `irm https://kunchenguid.github.io/treehouse/install.ps1 \| iex` (Windows), `curl -fsSL https://kunchenguid.github.io/treehouse/install.sh \| sh` (elsewhere) | the `treehouse` command on your PATH |
-| Playwright CLI | `npm install -g @playwright/cli@latest`, then `playwright-cli install --skills` (from your home folder) | the `playwright-cli` command and its skill |
-| Playwright MCP | adds `playwright` (`npx -y @playwright/mcp@latest`) to each ship's `mcp.json` that has none | `~/.crewrota/ships/<ship>/mcp.json` |
+| Command | What it does |
+|---|---|
+| [`crew setup [--yes] [--with-hooks]`](reference/setup-init-doctor.md#crew-setup) | Install the default tools from upstream: one list, one yes; anything installed is skipped |
+| [`crew init`](reference/setup-init-doctor.md#crew-init) | Write the project's root `.claude/` folder into the current folder; never overwrites a file |
+| [`crew doctor [--logins]`](reference/setup-init-doctor.md#crew-doctor) | Check Node, Claude Code, the folders, every link and each default tool |
+| `crew --help`, `crew -h`, `crew help` | The command list |
+| `crew --version`, `crew -v` | The version number alone |
 
-Skills land in `~/.claude/skills`, which every member links.
-After the installs it checks `gh auth status` and only reports it: sign in to GitHub yourself with `gh auth login`.
-It also asks once whether lavish-axi may send its usage telemetry; a no is remembered, and every launch then passes `LAVISH_AXI_TELEMETRY=0`.
-`--with-hooks` also runs `npm install -g gh-axi lavish-axi`, then `gh-axi setup hooks` and `lavish-axi setup hooks` (opt-in session hooks).
-`crew doctor` shows each tool as installed or missing, with the command that installs it.
+## Names
 
-## The Claude Code plugin: firstmate and the Lavish rule
+Member, ship and shortcut names use lowercase letters, digits and hyphens, start with a letter, and are at most 32 characters.
 
-The repo is also a Claude Code plugin marketplace with one plugin, `crewrota`:
+## Arguments for Claude
 
-```
-claude plugin marketplace add pasindu-premachandra/crewrota
-claude plugin install crewrota@crewrota
-```
+Anything after `--` goes to Claude Code, after crewrota's own flags.
+A Claude flag before `--` fails: `crew main --resume abc` prints `crewrota: Unknown option: --resume`, while `crew main -- --resume abc` works.
+See [The `--` rule](reference/menu-and-run.md#the----rule).
 
-Run these in your main Claude Code, not inside a member: every member links your main plugin cache and copies its plugin lists at launch.
+## Environment variables
 
-- **firstmate** (`/firstmate <task>`): runs a task through one or more crew members working headless. It reads the project's root `.claude/`, asks its questions on a Lavish page, writes the PRD and task list into the task's README, opens the agents board before the first dispatch, picks each member by rule and live quota (quota-axi), gives every lane its own tree (a treehouse lease, else a plain git worktree), checks and validates each result, drafts the ticket update in `evidence/ticket-update.md` for you to paste (it never posts), and writes what it learned into `.claude/memories/`. Nothing is committed, merged or published without your word.
-- **The Lavish rule**: a SessionStart hook that tells every session to put a question with options on a Lavish page in the task's `review/` folder, keep one-line facts in chat, and never share a page without your word. `crew config lavish off` turns it off.
-
-`crew init` in a project writes the root `.claude/` firstmate reads: `crewrota.json` (marks the root), a short `CLAUDE.md` only if the project has none, `memories/README.md`, `skills/` and `tasks/INDEX.md`.
+`CREWROTA_HOME` moves the crew home, `CREW_MEMBER` picks the member for `crew run`, and `CREWROTA_BACKUP_PASSWORD` gives `--password` its value without a terminal.
+`CREWROTA_CLAUDE`, `CREWROTA_QUOTA_AXI`, `CREWROTA_TAR`, `CREWROTA_CODE`, `CREWROTA_PYTHON`, `NO_COLOR` and `CI` are in [Environment variables](reference/environment-variables.md).
 
 ## Where things live
 
-| What | Windows | macOS |
+| What | Windows | macOS and Linux |
 |---|---|---|
 | Members | `%USERPROFILE%\.crewrota\members\<member>` | `~/.crewrota/members/<member>` |
-| Ships | `%USERPROFILE%\.crewrota\ships\<ship>\projects` | `~/.crewrota/ships/<ship>/projects` |
-| Removed members and ships | `%USERPROFILE%\.crewrota\removed` | `~/.crewrota/removed` |
-| Remembered settings | `%APPDATA%\crewrota\config.json` | `~/.config/crewrota/config.json` |
+| Ships | `%USERPROFILE%\.crewrota\ships\<ship>`: `projects`, `todos`, `file-history`, `session-env`, `shell-snapshots` and `mcp.json` | `~/.crewrota/ships/<ship>`, the same five folders and `mcp.json` |
+| Shortcuts | `%USERPROFILE%\.crewrota\shortcuts` | `~/.crewrota/shortcuts` |
+| Dropped members and deleted ships | `%USERPROFILE%\.crewrota\removed` | `~/.crewrota/removed` |
+| Settings | `%APPDATA%\crewrota\config.json` | `~/.config/crewrota/config.json` (or `$XDG_CONFIG_HOME/crewrota`) |
 
+Each member folder also holds its own `quota.json`, the last usage reading.
+The full tree, with the widget's files and the folders kept aside when a member joins a ship, is in [Files and folders](reference/files-and-folders.md).
 Set `CREWROTA_HOME` to keep members and ships somewhere else.
-crewrota never deletes a member or a ship: `remove` and `ship delete` move the folder to `removed/`, and you delete it yourself when you are sure.
+crewrota never deletes a member or a ship: `crew drop` and `crew ship delete` move the folder to `removed/`, and you delete it yourself when you are sure.
 
-## Moving to a new machine
+## More
 
-```
-crew backup --password
-crew restore crewrota-backup-20261026-0905.zip --password
-```
-
-`crew backup` writes one zip in the current folder (or `--to <folder>`): every ship with its history, memory, session folders and MCP servers, the member list with each member's ship, model and effort, the remembered settings, your project `.claude` folders and your main skills.
-Logins are never in it: after `crew restore`, sign each member in again with `crew login <member>`, and the restore prints that line for every member it made.
-`crew restore` merges the ships into the ones you have, re-creates the members you are missing, and leaves your existing members and settings alone.
-Claude Code files each session under its project's full folder path, so the restore renames those folders when your home folder differs on the new machine.
-For projects that moved elsewhere, add `--map <old folder>=<new folder>`, for example `--map E:\Projects=D:\work`; it renames that folder and every folder below it, and you can repeat it.
-The zip holds your transcripts, task notes and the ships' MCP keys in plain text, so use `--password` to encrypt it with AES-256; without a terminal crewrota reads the password from `CREWROTA_BACKUP_PASSWORD`. File and folder names inside the zip stay readable even with a password.
-A name outside plain ASCII (Sinhala, Tamil, Japanese) is stored as `~crew1`, `~crew2` and so on, because the tar that newer Windows ships crashes on such names; the restore puts the real names back.
-The zip is written and read by bsdtar, which Windows 10 and 11 and macOS already have; on Linux install `libarchive-tools`.
-
-### Project `.claude` folders and skills
-
-You do not list anything. `crew backup` reads the folders Claude Code has worked in from your transcripts and `.claude.json` files, then takes every `.claude` in those folders and above them, and looks up to six levels below the top-most of them. A git repo you worked in that has no `.claude` at its top is looked through the same way.
-
-- **Goes in:** each project's `.claude` (tasks with their evidence, memories, skills, rules), a `CLAUDE.md` beside it that git does not track, and from `~/.claude` the skills, agents, commands and `CLAUDE.md`. Linked skills are stored as real files.
-- **Stays behind:** logins and keys by file name (`.credentials*`, `.env` and `.env.*` other than `.env.example`, `.env.sample` and `.env.template`, `*.pem`, `*.key`, `id_rsa*` and similar), `settings.local.json`, `node_modules`, `.git`, `worktrees`, linked git worktrees, `~/.claude/settings.json`, `~/.claude/skills/synced` (Claude Code downloads it again for each account), `.trash`, any folder in `skills` with no `SKILL.md`, and the history of a member that is on no ship. Your plugins are listed by the restore, with the command to install each one.
-- **Progress:** in a terminal, a bar shows each long step (copying, zipping, unpacking, putting files back) with how far it has got; piped output stays plain.
-- **Check first:** `crew backup --dry-run` prints the same report and writes nothing. The report names the largest task folders, any file that looks like it holds a key (the check is best effort; it never prints the value), and every repo with changes or commits that are not pushed, since only pushed code comes back.
-- **Leave things out:** `--skip <folder>` drops a project or any folder inside a `.claude`, and you can repeat it. `--no-context` writes only the ships, members and settings.
-
-On the new machine, `crew restore` adds the skills to `~/.claude` and each `.claude` to its project folder. Your files are never overwritten: the same file is skipped, and a file that differs arrives beside yours as `<name>.incoming-1`, which you can compare and delete. A restore run over your own edits can leave such a copy even when only your side changed.
-A folder whose drive does not exist on the new machine is named, and waits for `--map`.
-
-To get the code as well, add `--clone`: each repo is cloned from its `origin`, and its `.claude` is laid over the clone, so you can pick a task up from its notes straight away. A tracked `.claude` file that differs from the remote shows as modified in `git status`, so nothing is hidden. It uses your own git login, and you can run the restore again at any time, with or without `--clone` the first time; a repo that is already there is left alone, and a folder that holds other files is not cloned into.
-
-```
-crew restore crewrota-backup-20261026-0905.zip --password --clone --map E:\Projects=D:\work
-```
-
-A `.claude` can hold hooks and settings that run on your machine, so restore only a backup you made yourself.
-
-## Your main setup in every member
-
-Before every launch crew links each member's `skills`, `agents` and `commands` to the ones in `~/.claude`, gives it a `plugins` folder whose cache, data and marketplaces are links to yours (the layout ccs uses), and copies `~/.claude/settings.json` and `~/.claude/CLAUDE.md` into it.
-It only reads your main setup; the one command that writes to `~/.claude` is `crew restore`, which adds skills, agents, commands and `CLAUDE.md` without overwriting anything. Nothing writes to `~/.claude.json`.
-
-MCP servers come from the member's ship: `crew ship mcp list|add|remove <ship> ...` manages them, kept in that ship's `mcp.json` beside the logins, and a new ship starts with a copy of the ones in `~/.claude.json`.
-A member with no ship gets the ones in `~/.claude.json`.
-For servers that belong to one repo, use Claude Code's own `.mcp.json` in that repo (`claude mcp add --scope project`), with keys written as `${VAR}` and set in your shell before `crew`.
-
+- [Exit codes and terminal needs](reference/exit-codes.md)
+- [The default tools](reference/setup-init-doctor.md#crew-setup)
+- [The Claude Code plugin](agents/firstmate.md)
+- [Move to a new machine](guides/backup-and-restore.md)
+- [Your main setup in every member](guides/main-setup.md)
+- [Questions people ask](faq.md)

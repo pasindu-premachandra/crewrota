@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="https://crewrota.pasindug.com">Website</a> |
+  <a href="https://crewrota.pasindug.com/docs/">Docs</a> |
   <a href="#install">Install</a> |
   <a href="docs/windows/quickstart.md">Windows quickstart</a> |
   <a href="docs/macos/quickstart.md">macOS quickstart</a> |
@@ -88,7 +89,7 @@ Every command, the default tools and where files live: [docs/commands.md](docs/c
 
 crewrota is for one person running their own Claude subscriptions.
 Each member logs in through Claude Code's own login, and the login stays in that member's folder.
-crewrota never reads, copies or ships credentials.
+crewrota never copies or moves a login; to read usage, quota-axi uses each member's own sign-in on your machine.
 Read Anthropic's terms for your plan before you use several accounts:
 
 - Consumer Terms: https://www.anthropic.com/legal/consumer-terms

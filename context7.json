@@ -1,0 +1,12 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "crewrota",
+  "description": "Command-line tool (crew, crw, crewrota) that runs Claude Code as one of several crew members, each Claude login in its own config folder, with shared history on ships, every member's usage on one screen, and backup and restore of the whole crew.",
+  "folders": ["docs"],
+  "excludeFolders": ["docs/images"],
+  "rules": [
+    "Claude Code flags go after --: crew main -- --resume <id>, never crew main --resume <id>.",
+    "crew add and crew login run Claude Code's own browser login, so hand these commands to the user to run in their own terminal.",
+    "crew warmup is the only crewrota command that sends a message to Claude; run it only when the user asks."
+  ]
+}
