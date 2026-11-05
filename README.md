@@ -106,4 +106,4 @@ Change it any time with `crew config permissions on` or `crew config permissions
 
 MIT. Bug reports and ideas are welcome as [GitHub issues](https://github.com/pasindu-premachandra/crewrota/issues).
 
-Status: Stable (1.0.5).
+Status: Stable (2.0.0).

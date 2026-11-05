@@ -9,6 +9,21 @@ Run `crew doctor`.
 It checks Node, Claude Code, your crew home and settings, every member's folder and links, and the default tools, and prints a `fix:` line under anything wrong.
 `crew doctor --logins` also asks Claude Code whether each member is logged in.
 
+## Find your problem
+
+| You see | Start here |
+|---|---|
+| `crew` or `claude` is not found | [Install crewrota](../install.md), and [the fix for a missing claude](#what-each-check-means) |
+| A `FAIL` line from `crew doctor` | [What each check means](#what-each-check-means) |
+| A `crewrota: <message>` error | [Common errors](#common-errors) |
+| `Unknown option: --resume` | Claude's flags go after `--`; see [Common errors](#common-errors) |
+| "needs a terminal" from a script or an agent | [Commands that need a terminal](#commands-that-need-a-terminal) |
+| A member is not logged in, or its folder is missing | `crew login <member>`; see [Add and manage crew members](members.md) |
+| `--resume` cannot find a session from another member | Put both members on one ship; see [Share history between members with a ship](ships.md) |
+| An MCP server is gone after a restart | [Give a ship's members the same MCP servers](mcp-servers.md) |
+| Usage bars are empty or old | [Where usage readings come from](../concepts/usage-readings.md) |
+| A backup or restore fails | [Move your crew to a new machine](backup-and-restore.md) |
+
 ## Read the doctor's lines
 
 This demo crew has a member whose folder is gone:

@@ -37,6 +37,7 @@ Read [Your accounts and Anthropic's terms](concepts/accounts-and-terms.md) befor
 
 ### Get started
 
+- [Why crewrota, and what it is not](why.md)
 - [Install crewrota](install.md)
 - [Your first crew in five minutes](first-crew.md)
 - Quickstarts: [Windows](windows/quickstart.md), [macOS (beta)](macos/quickstart.md), [Linux (beta)](linux/quickstart.md)
