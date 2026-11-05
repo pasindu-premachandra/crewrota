@@ -37,7 +37,7 @@ src/paths.ts      config, crewrota home, member, ship and main-setup paths
 src/names.ts      member and ship name rule
 src/test/         node:test tests, fixtures/ holds the fake claude
 scripts/          install.ps1 and install.sh (global install from a packed build), check-private.mjs (denylist scan), hooks/pre-push
-docs/             windows/ and macos/ quickstarts (macOS is beta), commands.md (every command and the reference the README links to)
+docs/             the docs site's source (crewrota.pasindug.com/docs/): get started, windows/, macos/ and linux/ quickstarts (macOS and Linux beta), guides/, concepts/, reference/, agents/, developers/, faq.md, commands.md (overview), images/; built by crewrota-site/docs-src
 ```
 
 ## Commands
