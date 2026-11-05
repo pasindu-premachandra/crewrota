@@ -11,7 +11,7 @@
   <a href="https://github.com/pasindu-premachandra/crewrota/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pasindu-premachandra/crewrota/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI status"></a>
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/npm/v/crewrota?style=for-the-badge&label=npm&color=3fb68b" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/crewrota"><img src="https://img.shields.io/node/v/crewrota?style=for-the-badge&color=6f7684" alt="Node version"></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20beta-6f7684?style=for-the-badge" alt="Platforms: Windows, macOS beta">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20beta%20%7C%20Linux%20beta-6f7684?style=for-the-badge" alt="Platforms: Windows, macOS beta, Linux beta">
 </p>
 
 <p align="center">
@@ -20,7 +20,8 @@
   <a href="#install">Install</a> |
   <a href="docs/windows/quickstart.md">Windows quickstart</a> |
   <a href="docs/macos/quickstart.md">macOS quickstart</a> |
-  <a href="docs/commands.md">All commands</a> |
+  <a href="docs/linux/quickstart.md">Linux quickstart</a> |
+  <a href="https://crewrota.pasindug.com/docs/commands/">All commands</a> |
   <a href="https://github.com/sponsors/pasindu-premachandra">Sponsor</a>
 </p>
 
@@ -65,7 +66,7 @@ claude plugin marketplace add pasindu-premachandra/crewrota
 claude plugin install crewrota@crewrota
 ```
 
-Step by step: [Windows](docs/windows/quickstart.md) or [macOS (beta)](docs/macos/quickstart.md).
+Step by step: [Windows](docs/windows/quickstart.md), [macOS (beta)](docs/macos/quickstart.md) or [Linux (beta)](docs/linux/quickstart.md).
 
 ## Main commands
 
@@ -83,7 +84,7 @@ Step by step: [Windows](docs/windows/quickstart.md) or [macOS (beta)](docs/macos
 | `crew backup --password` | One encrypted zip for a new machine |
 | `crew doctor` | Check the setup |
 
-Every command, the default tools and where files live: [docs/commands.md](docs/commands.md), or `crew --help`.
+Every command: [All commands](https://crewrota.pasindug.com/docs/commands/) on the docs site, or `crew --help`. The default tools: [crew setup](https://crewrota.pasindug.com/docs/reference/setup-init-doctor/#crew-setup). Where files live: [Files and folders](https://crewrota.pasindug.com/docs/reference/files-and-folders/).
 
 ## Your accounts and Anthropic's terms
 
