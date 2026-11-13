@@ -46,6 +46,9 @@ export function writeQuota(dir: string, input: unknown, now = Date.now()): boole
   const [fivePct, fiveAt] = window('five_hour');
   const [weekPct, weekAt] = window('seven_day');
   if (!fresh) return false;
+  const fromQuotaAxi = field(input, 'source') === 'quota-axi'; // only quota-axi reads Fable, so its reading without one clears it
+  const fablePct = fromQuotaAxi ? (field(input, 'rate_limits.fable.used_percentage') ?? '') : (old.fable_pct ?? '');
+  const fableAt = fromQuotaAxi ? (field(input, 'rate_limits.fable.resets_at') ?? '') : (old.fable_resets_at ?? '');
   const quota = {
     ts: Math.floor(now / 1000),
     seen,
@@ -53,6 +56,8 @@ export function writeQuota(dir: string, input: unknown, now = Date.now()): boole
     seven_day_pct: weekPct,
     five_hour_resets_at: fiveAt,
     seven_day_resets_at: weekAt,
+    fable_pct: fablePct,
+    fable_resets_at: fableAt,
   };
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(quota));
   fs.renameSync(`${file}.tmp`, file);

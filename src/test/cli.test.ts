@@ -327,6 +327,16 @@ test('a member whose quota-axi read fails or is not fresh keeps its last reading
   }
 });
 
+test('quota shows the Fable figure quota-axi reads, warmup keeps it, and a reading without Fable clears it', () => {
+  const fable = cli(['quota'], { FAKE_QUOTA_FABLE: '21' });
+  assert.equal(fable.code, 0);
+  assert.match(fable.out, /home +▖+ +30% +▖+ +55% {2}F 21%/);
+  assert.match(cli(['warmup', 'home']).out, /home +▖* +25% +▖+ +40% {2}F 21%/);
+  const plain = cli(['quota']);
+  assert.match(plain.out, /home +▖+ +30% +▖+ +55%/);
+  assert.doesNotMatch(plain.out, /F \d+%/);
+});
+
 test('warmup says what it does, sends each member one Haiku message, then shows the bars', () => {
   const before = probes().length;
   const { code, out } = cli(['warmup'], { FAKE_CLAUDE_FIVE: '7' });

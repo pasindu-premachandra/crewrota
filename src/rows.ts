@@ -17,6 +17,7 @@ export interface MemberRow {
 export interface Quota {
   fiveHour: number | null;
   week: number | null;
+  fable: number | null;
 }
 
 function age(seconds: number): string {
@@ -40,7 +41,8 @@ export function readUsage(dir: string, now = Date.now()): string {
     return 'no reading yet';
   }
   if (typeof data?.ts !== 'number') return 'no reading yet';
-  return `5h ${percent(data.five_hour_pct)}  7d ${percent(data.seven_day_pct)}  (${age(Math.max(0, now / 1000 - data.ts))})`;
+  const fable = percent(data.fable_pct);
+  return `5h ${percent(data.five_hour_pct)}  7d ${percent(data.seven_day_pct)}${fable === '-' ? '' : `  F ${fable}`}  (${age(Math.max(0, now / 1000 - data.ts))})`;
 }
 
 function windowPercent(pct: unknown, resetsAt: unknown, now: number): number | null {
@@ -60,6 +62,7 @@ export function readQuota(dir: string, now = Date.now()): Quota | null {
   return {
     fiveHour: windowPercent(data.five_hour_pct, data.five_hour_resets_at, now),
     week: windowPercent(data.seven_day_pct, data.seven_day_resets_at, now),
+    fable: windowPercent(data.fable_pct, data.fable_resets_at, now),
   };
 }
 

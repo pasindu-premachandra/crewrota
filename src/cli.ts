@@ -181,12 +181,12 @@ interface Launch {
 }
 
 // A member whose reading fails keeps its last one.
-async function saveReadings(names: string[], read: (dir: string) => Promise<RateLimits | null>): Promise<void> {
+async function saveReadings(names: string[], read: (dir: string) => Promise<RateLimits | null>, source?: string): Promise<void> {
   await Promise.all(
     names.map(async (name) => {
       const limits = await read(memberDir(name));
       try {
-        if (limits) writeQuota(memberDir(name), { rate_limits: limits });
+        if (limits) writeQuota(memberDir(name), { rate_limits: limits, source });
       } catch {
         // the menu still opens with the last reading
       }
@@ -204,7 +204,7 @@ async function refreshReadings(config: Config): Promise<void> {
       `${paint('text', `Checking usage for ${who}`)} ${paint('faint', '(crewrota reads each member\'s usage; stop it with:')} ${paint('amber', 'crew config refresh off', true)}${paint('faint', ')...')}`,
     );
   }
-  await saveReadings(names, readRateLimits);
+  await saveReadings(names, readRateLimits, 'quota-axi');
   if (terminal) process.stdout.write('\r\x1b[2K');
 }
 

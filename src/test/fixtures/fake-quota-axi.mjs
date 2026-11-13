@@ -24,6 +24,7 @@ console.log(
         windows: [
           window('five_hour', process.env.FAKE_QUOTA_FIVE ?? 30, '2033-05-18T03:33:20.000Z'),
           window('seven_day', process.env.FAKE_QUOTA_WEEK ?? 55, '2033-05-25T03:33:20.000Z'),
+          ...(process.env.FAKE_QUOTA_FABLE ? [{ ...window('model:fable', process.env.FAKE_QUOTA_FABLE, '2033-05-25T03:33:20.000Z'), kind: 'model' }] : []),
         ],
         state: { status: process.env.FAKE_QUOTA_STATUS ?? 'fresh', stale: Boolean(process.env.FAKE_QUOTA_STATUS) },
       },

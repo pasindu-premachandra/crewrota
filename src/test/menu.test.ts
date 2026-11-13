@@ -7,6 +7,7 @@ import { CANCEL_SYMBOL } from '@clack/prompts';
 import type { Config } from '../config.js';
 import { ADD_MEMBER, TYPE_A_NAME, askMemberName, askSkipPermissions, crewMenu, menubarColour, menubarLines, pickChoice, pickMember, quotaLines } from '../menu.js';
 import { memberDir } from '../paths.js';
+import { readUsage } from '../rows.js';
 import { fakeMember, isolate, scriptedUi } from './helpers.js';
 
 isolate();
@@ -145,6 +146,20 @@ test('crew quota lists every member with its bars and no marker', () => {
   assert.match(lines[2], /member +5h +week/);
   assert.match(lines[3], /^ {5}home +no reading yet$/);
   assert.match(lines[4], /^ {5}work +▖{14} +42% +▖{14} +18%$/);
+});
+
+test('crew quota and the member list add the Fable figure after the week only for a member with a Fable reading', () => {
+  const fable: Config = { skipPermissions: null, members: {} };
+  fakeMember(fable, 'fab');
+  fakeMember(fable, 'plain');
+  const ts = Math.floor(Date.now() / 1000) - 600;
+  fs.writeFileSync(path.join(memberDir('fab'), 'quota.json'), JSON.stringify({ ts, five_hour_pct: 100, seven_day_pct: 79, fable_pct: 21.4, fable_resets_at: '' }));
+  fs.writeFileSync(path.join(memberDir('plain'), 'quota.json'), JSON.stringify({ ts, five_hour_pct: 9, seven_day_pct: 1, fable_pct: '', fable_resets_at: '' }));
+  const lines = quotaLines(fable, new PassThrough());
+  assert.match(lines[3], /^ {5}fab +▖{14} +100% +▖{14} +79% {2}F 21%$/);
+  assert.match(lines[4], /^ {5}plain +▖{14} +9% +▖{14} +1%$/);
+  assert.equal(readUsage(memberDir('fab')), '5h 100%  7d 79%  F 21%  (10 min ago)');
+  assert.equal(readUsage(memberDir('plain')), '5h 9%  7d 1%  (10 min ago)');
 });
 
 test('crew quota --format menubar puts the current member in the bar text, then every member and two actions', () => {

@@ -36,8 +36,10 @@ test('the rate limits from Claude Code are saved to quota.json', () => {
     seven_day_pct: 31,
     five_hour_resets_at: NOW / 1000 + 3600,
     seven_day_resets_at: NOW / 1000 + 86400,
+    fable_pct: '',
+    fable_resets_at: '',
   });
-  assert.deepEqual(readQuota(dir, NOW), { fiveHour: 42, week: 31 });
+  assert.deepEqual(readQuota(dir, NOW), { fiveHour: 42, week: 31, fable: null });
 });
 
 test('a window missing from the payload keeps its last reading, and no rate limits writes nothing', () => {
@@ -63,7 +65,23 @@ test('an older session redrawing its last reading does not overwrite a newer one
 test('a window whose reset time has passed reads as 0%', () => {
   const dir = folder('reset');
   writeQuota(dir, payload(90, 60), NOW);
-  assert.deepEqual(readQuota(dir, NOW + 2 * 3_600_000), { fiveHour: 0, week: 60 });
+  assert.deepEqual(readQuota(dir, NOW + 2 * 3_600_000), { fiveHour: 0, week: 60, fable: null });
+});
+
+test('a quota-axi reading writes Fable, a fresh one without Fable clears it, and the status line carries it over', () => {
+  const dir = folder('fable');
+  const fable = { used_percentage: 21, resets_at: NOW / 1000 + 86400 };
+  assert.equal(writeQuota(dir, { source: 'quota-axi', rate_limits: { ...payload(42, 31).rate_limits, fable } }, NOW), true);
+  assert.equal(quotaOf(dir).fable_pct, 21);
+  assert.equal(quotaOf(dir).fable_resets_at, NOW / 1000 + 86400);
+  assert.deepEqual(readQuota(dir, NOW), { fiveHour: 42, week: 31, fable: 21 });
+  writeQuota(dir, payload(50, 32), NOW + 1000);
+  assert.equal(quotaOf(dir).fable_pct, 21);
+  assert.equal(quotaOf(dir).fable_resets_at, NOW / 1000 + 86400);
+  writeQuota(dir, { source: 'quota-axi', rate_limits: payload(52, 33).rate_limits }, NOW + 2000);
+  assert.equal(quotaOf(dir).fable_pct, '');
+  assert.equal(quotaOf(dir).fable_resets_at, '');
+  assert.deepEqual(readQuota(dir, NOW + 2000), { fiveHour: 52, week: 33, fable: null });
 });
 
 test('the status line shows model, context, branch, both windows, the 5-hour reset, folder and member', () => {
@@ -137,7 +155,7 @@ test('the usage probe sends one Haiku message that is saved nowhere and loads no
   assert.equal(call.dir, dir);
   for (const flag of ['-p', '--model', 'haiku', '--no-session-persistence', '--setting-sources', '--strict-mcp-config']) assert.ok(call.args.includes(flag), flag);
   writeQuota(dir, { rate_limits: limits });
-  assert.deepEqual(readQuota(dir), { fiveHour: 61, week: 40 });
+  assert.deepEqual(readQuota(dir), { fiveHour: 61, week: 40, fable: null });
 });
 
 test('a probe that gets no usage line gives nothing back', async () => {
@@ -146,8 +164,8 @@ test('a probe that gets no usage line gives nothing back', async () => {
   delete process.env.FAKE_CLAUDE_NO_LIMITS;
 });
 
-test('quota-axi\'s JSON is read as used percent and Unix reset times, and only a fresh reading counts', () => {
-  const report = (status: string) =>
+test('quota-axi\'s JSON is read as used percent and Unix reset times, Fable included, and only a fresh reading counts', () => {
+  const report = (status: string, fable = true) =>
     JSON.stringify({
       providers: [
         {
@@ -155,16 +173,19 @@ test('quota-axi\'s JSON is read as used percent and Unix reset times, and only a
           windows: [
             { id: 'five_hour', percentRemaining: 82, resetsAt: '2026-03-15T20:10:48.000Z' },
             { id: 'seven_day', percentRemaining: 64, resetsAt: '2026-03-20T17:59:45.600Z' },
-            { id: 'model:fable', percentRemaining: 71, resetsAt: '2026-03-20T08:25:12.000Z' },
+            ...(fable ? [{ id: 'model:fable', kind: 'model', percentRemaining: 79, resetsAt: '2026-03-20T08:25:12.000Z' }] : []),
+            { id: 'model:other', kind: 'model', percentRemaining: 50, resetsAt: '2026-03-20T08:25:12.000Z' },
           ],
           state: { status },
         },
       ],
     });
-  assert.deepEqual(rateLimitsFromQuotaAxi(report('fresh')), {
+  const weekly = {
     five_hour: { used_percentage: 18, resets_at: Date.UTC(2026, 2, 15, 20, 10, 48) / 1000 },
     seven_day: { used_percentage: 36, resets_at: Math.floor(Date.UTC(2026, 2, 20, 17, 59, 45) / 1000) },
-  });
+  };
+  assert.deepEqual(rateLimitsFromQuotaAxi(report('fresh')), { ...weekly, fable: { used_percentage: 21, resets_at: Date.UTC(2026, 2, 20, 8, 25, 12) / 1000 } });
+  assert.deepEqual(rateLimitsFromQuotaAxi(report('fresh', false)), weekly);
   assert.equal(rateLimitsFromQuotaAxi(report('stale')), null);
   assert.equal(rateLimitsFromQuotaAxi(report('error')), null);
   assert.equal(rateLimitsFromQuotaAxi('not json'), null);

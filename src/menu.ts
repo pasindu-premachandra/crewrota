@@ -123,8 +123,12 @@ function usageBar(paint: Paint, pct: number | null): string {
   return `${paint(tone, '▖'.repeat(filled))}${paint('empty', '▖'.repeat(BAR_CELLS - filled))}  ${paint(tone, `${pct}%`.padStart(4))}`;
 }
 
+function fableText(paint: Paint, pct: number | null): string {
+  return pct === null ? '' : `  ${paint(pct < 60 ? 'green' : pct < 80 ? 'amber' : 'red', `F ${pct}%`)}`;
+}
+
 function memberUsage(paint: Paint, row: MemberRow): string {
-  return row.quota ? `${usageBar(paint, row.quota.fiveHour)}     ${usageBar(paint, row.quota.week)}` : paint('faint', 'no reading yet');
+  return row.quota ? `${usageBar(paint, row.quota.fiveHour)}     ${usageBar(paint, row.quota.week)}${fableText(paint, row.quota.fable)}` : paint('faint', 'no reading yet');
 }
 
 function nameWidthOf(members: MemberRow[]): number {
@@ -204,7 +208,8 @@ export async function crewMenu(config: Config, io: MenuIO = {}): Promise<Pick | 
   let setting = 0;
   const modelValues = () => [...(MODELS.includes(choice.model) || choice.model === TYPE_A_NAME ? MODELS : [...MODELS, choice.model]), TYPE_A_NAME];
   const nameWidth = nameWidthOf(members);
-  const lineWidth = 5 + nameWidth + 3 + COLUMN_WIDTH + 5 + COLUMN_WIDTH + 2;
+  const fableWidth = members.some((row) => row.quota?.fable != null) ? 8 : 0; // "  F 100%"
+  const lineWidth = 5 + nameWidth + 3 + COLUMN_WIDTH + 5 + COLUMN_WIDTH + fableWidth + 2;
 
   const line = (row: string, text: string) => (rows[cursor] === row ? highlight(text, lineWidth) : text);
   const memberLine = (row: MemberRow) => {

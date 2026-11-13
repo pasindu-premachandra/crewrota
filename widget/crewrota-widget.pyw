@@ -33,6 +33,8 @@ HOVER_LINE = "#44464b"
 GREEN = "#3fb68b"
 AMBER = "#e0a43a"
 RED = "#e5534b"
+BLUE = "#6ea8fe"
+FABLE_ROW = 10
 
 
 def number(value):
@@ -103,6 +105,7 @@ def load_rows(home, config, now):
             "ts": ts,
             "five": percent(data, "five_hour_pct", "five_hour_resets_at", now),
             "week": percent(data, "seven_day_pct", "seven_day_resets_at", now),
+            "fable": percent(data, "fable_pct", "fable_resets_at", now),
             "five_reset": reset_time(number(data.get("five_hour_resets_at")), now),
             "week_reset": reset_day(number(data.get("seven_day_resets_at")), now),
             "stale": ts is None or now - ts > STALE_AFTER,
@@ -337,26 +340,34 @@ class Widget:
         if rows:
             c.create_text(px(72), px(41), text="5h", anchor="w", font=self.small_font, fill=MUTED)
             c.create_text(px(206), px(41), text="week", anchor="w", font=self.small_font, fill=MUTED)
-            footer = px(88 + 34 * (len(rows) - 1))
+            footer = px(88 + 34 * (len(rows) - 1) + FABLE_ROW * sum(row["fable"] is not None for row in rows))
         else:
             c.create_text(px(12), px(45), text="No crew members yet. Add one with: crew add <member>", anchor="w", font=self.small_font, fill=MUTED)
             footer = px(60)
-        for i, row in enumerate(rows):
-            y = px(60 + 34 * i)
+        top = 60
+        for row in rows:
+            y = px(top)
             c.create_text(px(12), y, text=row["label"], anchor="w", font=self.name_font, fill=dim(FG, row["stale"]))
             self.draw_meter(px(72), y, row["five"], row["five_reset"], row["stale"])
-            self.draw_meter(px(206), y, row["week"], row["week_reset"], row["stale"])
+            self.draw_meter(px(206), y, row["week"], row["week_reset"], row["stale"], row["fable"])
+            top += 34 + (FABLE_ROW if row["fable"] is not None else 0)
         self.draw_footer(footer)
         height = footer + px(34)
         c.create_rectangle(0, 0, w - 1, height - 1, outline=LINE)
         c.configure(height=height)
 
-    def draw_meter(self, x, y, pct, reset, stale):
+    def draw_meter(self, x, y, pct, reset, stale, fable=None):
         c, px = self.canvas, self.px
         c.create_rectangle(x, y - px(1), x + px(76), y + px(3), fill=dim(LINE, stale), outline="")
         if pct:
             c.create_rectangle(x, y - px(1), x + px(round(76 * min(pct, 100) / 100)), y + px(3), fill=dim(bar_colour(pct), stale), outline="")
         c.create_text(x + px(112), y, text="?" if pct is None else f"{pct}%", anchor="e", font=self.bold_font, fill=dim(FG, stale))
+        if fable is not None:
+            c.create_rectangle(x, y + px(9), x + px(76), y + px(11), fill=dim(LINE, stale), outline="")
+            if fable:
+                c.create_rectangle(x, y + px(9), x + px(round(76 * min(fable, 100) / 100)), y + px(11), fill=dim(BLUE, stale), outline="")
+            c.create_text(x + px(112), y + px(12), text=f"F {fable}%", anchor="e", font=self.small_font, fill=dim(MUTED, stale))
+            y += px(FABLE_ROW)
         c.create_text(x, y + px(11), text=reset, anchor="w", font=self.small_font, fill=dim(MUTED, stale))
 
     def draw_footer(self, top):

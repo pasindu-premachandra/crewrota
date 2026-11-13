@@ -65,6 +65,7 @@ export function authStatus(dir: string, run: Runner = runSync): AuthStatus {
 export interface RateLimits {
   five_hour?: { used_percentage: number; resets_at: number };
   seven_day?: { used_percentage: number; resets_at: number };
+  fable?: { used_percentage: number; resets_at: number };
 }
 
 // Reads the usage line of a stream-json run, in the shape the status line gets as rate_limits.
@@ -155,8 +156,9 @@ export function rateLimitsFromQuotaAxi(text: string): RateLimits | null {
   if (provider?.state?.status !== 'fresh' || !Array.isArray(provider.windows)) return null;
   const limits: RateLimits = {};
   for (const window of provider.windows) {
-    if ((window?.id === 'five_hour' || window?.id === 'seven_day') && typeof window.percentRemaining === 'number') {
-      limits[window.id as keyof RateLimits] = { used_percentage: 100 - window.percentRemaining, resets_at: Math.floor(Date.parse(window.resetsAt) / 1000) || 0 };
+    const name = window?.id === 'model:fable' ? 'fable' : window?.id;
+    if ((name === 'five_hour' || name === 'seven_day' || name === 'fable') && typeof window.percentRemaining === 'number') {
+      limits[name as keyof RateLimits] = { used_percentage: 100 - window.percentRemaining, resets_at: Math.floor(Date.parse(window.resetsAt) / 1000) || 0 };
     }
   }
   return Object.keys(limits).length > 0 ? limits : null;
