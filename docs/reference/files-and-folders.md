@@ -83,7 +83,7 @@ One per member folder, the last usage reading.
 ```text
 $ cat ~/.crewrota/members/side/quota.json
 
-{"ts":1793824758,"seen":1793824758,"five_hour_pct":12,"seven_day_pct":34,"five_hour_resets_at":1999990000,"seven_day_resets_at":1999999000}
+{"ts":1793824758,"seen":1793824758,"five_hour_pct":12,"seven_day_pct":34,"five_hour_resets_at":1999990000,"seven_day_resets_at":1999999000,"fable_pct":20,"fable_resets_at":1999999000}
 ```
 
 | Key | What it is |
@@ -92,9 +92,11 @@ $ cat ~/.crewrota/members/side/quota.json
 | `seen` | When the session behind it last wrote; a reading from an older session never overwrites a newer one |
 | `five_hour_pct`, `seven_day_pct` | Percent used in the 5-hour and 7-day windows, or `""` when unknown |
 | `five_hour_resets_at`, `seven_day_resets_at` | When each window resets, in seconds since 1970, or `""` |
+| `fable_pct`, `fable_resets_at` | The weekly Fable figure and its reset time, or `""` when the member has none |
 
 - Written through `quota.json.tmp` and a rename, so a reader never sees half a file.
 - A window missing from a new reading keeps its last value.
+- Only quota-axi's reading (the menu and `crew quota`) sets the Fable fields; a fresh one with no Fable figure clears them. `crew statusline` and `crew warmup` keep them as they are.
 - Readers: the menu, `crew list`, `crew quota`, `crew quota --format menubar` and the widget. A window whose reset time has passed is shown as 0%.
 - quota-axi's reading counts only when it is fresh; a member whose reading fails keeps its last one.
 

@@ -128,6 +128,7 @@ $ crew list
 ```
 
 Each line: `*` on the current member, the name, its ship or `isolated`, its last usage reading with its age (or `no reading yet`), and the email with the organisation, `personal`, or `no login found`.
+A reading with a weekly Fable figure adds it after the week, as `5h 30%  7d 55%  F 20%`.
 It reads `quota.json` only and never checks usage.
 With no members it prints `No crew members yet. Add one with: crew add <member>`.
 

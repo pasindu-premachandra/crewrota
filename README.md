@@ -36,7 +36,7 @@ crewrota keeps every login signed in, carries your sessions across them and show
 ## What you get
 
 - **One screen to start.** Type `crew`, pick a member, its model and effort, and Claude Code opens as that login. Your main `~/.claude` login is never touched.
-- **Usage at a glance.** 5-hour and weekly bars for every member, in the terminal (`crew quota`) or in a small desktop widget (`crew widget`).
+- **Usage at a glance.** 5-hour and weekly bars for every member, plus the weekly Fable figure where your plan has one, in the terminal (`crew quota`) or in a small desktop widget (`crew widget`).
 - **Warm-up.** `crew warmup` sends each member one short message, so its 5-hour window starts before you need it.
 - **Shared history.** Members on the same ship share history and memory, so `--resume` finds a session another member started. A ship also gives its members the same MCP servers.
 - **Your setup in every member.** Your skills, agents, commands, plugins, settings and `CLAUDE.md` come with every member.
@@ -106,4 +106,4 @@ Change it any time with `crew config permissions on` or `crew config permissions
 
 MIT. Bug reports and ideas are welcome as [GitHub issues](https://github.com/pasindu-premachandra/crewrota/issues).
 
-Status: Stable (2.0.0).
+Status: Stable (2.1.0).

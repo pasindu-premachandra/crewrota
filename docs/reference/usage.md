@@ -38,6 +38,7 @@ crewrota  crew quota
 - Unless `crew config refresh off` is set, it first reads every member's usage with quota-axi, one call per member, side by side. quota-axi sends no message. A member whose reading fails keeps its last one.
 - In a terminal the filled part of each bar is coloured: green under 60%, amber from 60%, red from 80%. Piped, the output has no colour, so only the percentages carry the numbers.
 - A member with no reading shows `no reading yet`; a window whose reset time has passed shows 0%.
+- A member whose reading has a weekly Fable figure gets `F N%` after its week bar, coloured the same way, for example `55%  F 20%`; a fresh reading without one clears it. See [Where usage readings come from](../concepts/usage-readings.md#the-fable-figure).
 - With no members it prints `No crew members yet. Add one with: crew add <member>`.
 - It has no `--json`; a script reads each member's `quota.json` instead (see [Files and folders](files-and-folders.md#quotajson)).
 

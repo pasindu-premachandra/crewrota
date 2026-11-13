@@ -19,14 +19,15 @@ crew quota
 crewrota  crew quota
 
      member   5h                       week
-     main     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%
-     side     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%
-     team     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%
+     main     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%  F 20%
+     side     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%  F 20%
+     team     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   30%     ▖▖▖▖▖▖▖▖▖▖▖▖▖▖   55%  F 20%
 ```
 
 ![crew quota in a terminal: coloured 5-hour and week bars for every member](../images/crew-quota.png)
 
 - Each bar has 14 cells. It is green under 60%, amber from 60% and red from 80%.
+- `F N%` after the week bar is the member's weekly Fable figure, with the same colours. It shows only when quota-axi reports one for that member, which depends on the plan; see [Where usage readings come from](../concepts/usage-readings.md#the-fable-figure).
 - A window whose reset time has passed since the reading shows 0%.
 - `-` means that window has no reading; `no reading yet` means the member has none at all.
 - The colour is only there in a terminal. Piped into a file or another program, the bars are plain, so only the `N%` columns mean anything; the text block above is such a copy.
@@ -101,10 +102,10 @@ The widget's bolt button runs the same command.
 A script can read each member's `quota.json` directly:
 
 ```text
-{"ts":1793796958,"seen":1793796958,"five_hour_pct":30,"seven_day_pct":55,"five_hour_resets_at":2000000000,"seven_day_resets_at":2000604800}
+{"ts":1794601388,"seen":1794601388,"five_hour_pct":30,"seven_day_pct":55,"five_hour_resets_at":2000000000,"seven_day_resets_at":2000604800,"fable_pct":20,"fable_resets_at":2000604800}
 ```
 
-`ts` is when the reading was saved, the `_pct` fields are percentages used, and the `_resets_at` fields are Unix times in seconds; any of them can be an empty string when unknown.
+`ts` is when the reading was saved, the `_pct` fields are percentages used (`fable_pct` is the weekly Fable figure), and the `_resets_at` fields are Unix times in seconds; any of them can be an empty string when unknown.
 See [Files and folders](../reference/files-and-folders.md).
 
 ## Related

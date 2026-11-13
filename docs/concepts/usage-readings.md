@@ -49,7 +49,7 @@ The widget dims a member whose reading is more than 6 hours old, and `crew list`
 ## The file
 
 ```text
-{"ts":1793796958,"seen":1793796958,"five_hour_pct":30,"seven_day_pct":55,"five_hour_resets_at":2000000000,"seven_day_resets_at":2000604800}
+{"ts":1794601388,"seen":1794601388,"five_hour_pct":30,"seven_day_pct":55,"five_hour_resets_at":2000000000,"seven_day_resets_at":2000604800,"fable_pct":20,"fable_resets_at":2000604800}
 ```
 
 | Key | Meaning |
@@ -58,6 +58,13 @@ The widget dims a member whose reading is more than 6 hours old, and `crew list`
 | `seen` | When the session it came from was last active; keeps an older session from overwriting a newer reading |
 | `five_hour_pct`, `seven_day_pct` | Percent used, or `""` when unknown |
 | `five_hour_resets_at`, `seven_day_resets_at` | Reset times in Unix seconds, or `""` |
+| `fable_pct`, `fable_resets_at` | The weekly Fable figure and its reset time, or `""` when the member has none |
+
+## The Fable figure
+
+On plans with a Fable limit (up to 50% of the weekly limit on Max, Ultra and premium seats, per [Claude Fable models on your plan](https://support.claude.com/en/articles/15424964-claude-fable-models-on-your-plan)), quota-axi reports it beside the 5-hour and week windows.
+Only that reading, from the crew menu or `crew quota`, sets `fable_pct`; a fresh one without a Fable figure clears it, so an old figure does not linger.
+Claude Code's status line never carries a Fable figure, so `crew statusline` and `crew warmup` keep the last one.
 
 It is written to `quota.json.tmp` first and then renamed, so a reader never sees half a file.
 

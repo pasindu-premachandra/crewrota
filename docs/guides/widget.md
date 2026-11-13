@@ -29,6 +29,7 @@ Drag it anywhere; it remembers its place.
 ## What it shows
 
 - **One row per member**, with its 5-hour and week bars, each with a percentage and its reset time. The colours match `crew quota`: green under 60%, amber from 60%, red from 80%.
+- **A thin blue Fable bar** under the week bar, with `F N%` beside it, for a member whose plan reports a weekly Fable figure. A member without one draws as before.
 - **The age of the readings** in the title row, as `read HH:MM` for the newest reading, or `no readings yet`.
 - **Dimmed rows** for a member whose last reading is more than 6 hours old.
 - **Today's tokens** across the crew in the footer, summed from every member's session transcripts, with the output tokens beside them.

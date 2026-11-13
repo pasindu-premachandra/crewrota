@@ -108,7 +108,7 @@ An agent reads the files instead:
 | File | Where | What to read |
 |---|---|---|
 | `config.json` | `%APPDATA%\crewrota\config.json` on Windows, `~/.config/crewrota/config.json` elsewhere | `members` (names, `ship`, `model`, `effort`), `current`, `previous`, `skipPermissions` (`null` means not asked yet) |
-| `quota.json` | `<crew home>/members/<member>/quota.json`, the crew home being `CREWROTA_HOME` or `~/.crewrota` | `five_hour_pct`, `seven_day_pct` (percent used), `five_hour_resets_at`, `seven_day_resets_at` and `ts` (seconds since 1970) |
+| `quota.json` | `<crew home>/members/<member>/quota.json`, the crew home being `CREWROTA_HOME` or `~/.crewrota` | `five_hour_pct`, `seven_day_pct` (percent used), `five_hour_resets_at`, `seven_day_resets_at`, `fable_pct` and `fable_resets_at` (the weekly Fable figure, `""` when none) and `ts` (seconds since 1970) |
 | a ship's `mcp.json` | `<crew home>/ships/<ship>/mcp.json` | Do not read it: it holds keys. `crew ship mcp list <ship>` gives the names and types |
 
 A reading is old when `ts` is hours ago; a window whose `resets_at` has passed is back at 0%.
