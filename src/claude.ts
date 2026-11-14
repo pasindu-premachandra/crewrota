@@ -21,9 +21,22 @@ export const runSync: Runner = (command, args, env) => {
 // CREWROTA_CLAUDE points crewrota at another claude, such as the fake one the tests use.
 export function claudeCommand(): [string, string[]] {
   const override = process.env.CREWROTA_CLAUDE;
-  if (!override) return ['claude', []];
-  if (/\.[cm]?js$/.test(override)) return [process.execPath, [override]];
-  return [override, []];
+  const command = override || (process.platform === 'win32' ? shimTarget() : null);
+  if (!command) return ['claude', []];
+  if (/\.[cm]?js$/.test(command)) return [process.execPath, [command]];
+  return [command, []];
+}
+
+// An npm install on Windows puts a claude.cmd shim on PATH, which spawn cannot start, so run the file it points at.
+function shimTarget(): string | null {
+  for (const dir of (process.env.PATH ?? '').split(path.delimiter).filter(Boolean)) {
+    if (fs.existsSync(path.join(dir, 'claude.exe'))) return null;
+    const shim = path.join(dir, 'claude.cmd');
+    if (!fs.existsSync(shim)) continue;
+    const targets = [...fs.readFileSync(shim, 'utf8').matchAll(/"%~?dp0%?\\([^"]+)"/g)].map((match) => match[1]);
+    return targets.length > 0 ? path.join(dir, targets[targets.length - 1]) : null; // the last one is the program; any before it is node.exe
+  }
+  return null;
 }
 
 export function memberEnv(dir: string): NodeJS.ProcessEnv {
@@ -36,11 +49,7 @@ export function claude(args: string[], env?: NodeJS.ProcessEnv, run: Runner = ru
 }
 
 export function claudeVersion(run: Runner = runSync): string | null {
-  let result = claude(['--version'], undefined, run);
-  // An npm-installed claude on Windows is a .cmd shim, which only cmd.exe can start.
-  if (result.error?.code === 'ENOENT' && process.platform === 'win32' && !process.env.CREWROTA_CLAUDE) {
-    result = run('cmd.exe', ['/d', '/c', 'claude --version']);
-  }
+  const result = claude(['--version'], undefined, run);
   return !result.error && result.status === 0 ? result.stdout.trim() : null;
 }
 

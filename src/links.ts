@@ -36,6 +36,7 @@ export function makeDirLink(target: string, link: string): void {
 
 // Every link at or below dir, found without following any link.
 export function findLinks(dir: string): string[] {
+  if (lstatOrNull(dir)?.isSymbolicLink()) return [dir];
   const links: string[] = [];
   for (const name of fs.readdirSync(dir)) {
     const file = path.join(dir, name);

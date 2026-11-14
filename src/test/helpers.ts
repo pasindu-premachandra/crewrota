@@ -34,6 +34,17 @@ export function isolate(): string {
   return root;
 }
 
+// Runs fn with process.platform reading as another OS, to reach a per-OS branch.
+export function onPlatform<T>(platform: NodeJS.Platform, fn: () => T): T {
+  const real = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  Object.defineProperty(process, 'platform', { ...real, value: platform });
+  try {
+    return fn();
+  } finally {
+    Object.defineProperty(process, 'platform', real);
+  }
+}
+
 // Registers a member with an invented login, without going through the creation workflow.
 export function fakeMember(
   config: Config,

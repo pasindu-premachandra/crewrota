@@ -173,11 +173,15 @@ export function removalImpact(config: Config, member: string): string[] {
   return lines;
 }
 
-// Unlinks every link in the member folder, then moves the folder to removed/. Returns where it went.
+// Unlinks every link in the member folder, then moves it to removed/; a member folder that is a link loses only that link.
 export function removeMember(config: Config, member: string): string | null {
   const dir = memberDir(member);
+  const stat = lstatOrNull(dir);
   let movedTo: string | null = null;
-  if (lstatOrNull(dir)) {
+  if (stat?.isSymbolicLink()) {
+    movedTo = path.resolve(path.dirname(dir), fs.readlinkSync(dir));
+    fs.unlinkSync(dir);
+  } else if (stat) {
     unlinkAll(dir);
     movedTo = moveToRemoved(dir, member, 'Its links were removed and are made again at its next launch; nothing else changed.');
   }

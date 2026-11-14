@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { loadConfig, saveConfig } from '../config.js';
-import { findLinks } from '../links.js';
+import { findLinks, lstatOrNull, makeDirLink } from '../links.js';
 import { removalImpact, removeMember, renameMember } from '../members.js';
 import { mainClaudeDir, memberDir, removedDir, shipProjectsDir } from '../paths.js';
 import { syncSharedItems } from '../shared.js';
@@ -44,6 +44,25 @@ test('remove unlinks every link first, then moves the folder to removed/, and th
   assert.equal(fs.readFileSync(path.join(shipProjectsDir('team'), 'session.jsonl'), 'utf8'), 'ship history');
   assert.equal(fs.readFileSync(path.join(mainClaudeDir(), 'skills', 'kept', 'SKILL.md'), 'utf8'), 'main skill');
   assert.equal(loadConfig().members.work, undefined);
+});
+
+test('remove of a member folder that is itself a link drops only that link and leaves the real folder as it was', () => {
+  const real = path.join(path.dirname(removedDir()), 'real-linked');
+  fs.mkdirSync(path.join(real, 'skill-target'), { recursive: true });
+  fs.writeFileSync(path.join(real, '.claude.json'), '{}');
+  makeDirLink(path.join(real, 'skill-target'), path.join(real, 'skills'));
+  const saved = loadConfig();
+  saved.members.linked = { provider: 'claude', created: '2026-11-14T00:00:00.000Z' };
+  saveConfig(saved);
+  makeDirLink(real, memberDir('linked'));
+
+  const keptAt = removeMember(saved, 'linked');
+
+  assert.equal(keptAt, path.resolve(real));
+  assert.equal(lstatOrNull(memberDir('linked')), null);
+  assert.equal(lstatOrNull(path.join(real, 'skills'))?.isSymbolicLink(), true);
+  assert.equal(fs.existsSync(path.join(real, '.claude.json')), true);
+  assert.equal(loadConfig().members.linked, undefined);
 });
 
 test('rename moves the folder and every reference to the member', () => {
