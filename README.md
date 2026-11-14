@@ -25,6 +25,8 @@
   <a href="https://github.com/sponsors/pasindu-premachandra">Sponsor</a>
 </p>
 
+<p align="center"><img src="docs/images/crewrota-launch.gif" width="480" alt="A 23-second tour: the crew menu, crew quota with every member's 5-hour, week and Fable figures, then the desktop widget with its Fable bars"></p>
+
 <p align="center"><img src="docs/images/crew-menu.png" width="720" alt="The crew menu: three members with their 5-hour and week bars, then the ship, model and effort on one line"><br><sub>The <code>crew</code> menu with a demo crew. Ship, model and effort are remembered per member.</sub></p>
 
 ## Why
@@ -45,6 +47,29 @@ crewrota keeps every login signed in, carries your sessions across them and show
 - **firstmate plugin.** `/firstmate <task>` hands a task to other members running in their own git worktree. Nothing is committed without your word.
 
 <p align="center"><img src="docs/images/crew-widget.png" width="330" alt="The crewrota widget: every member's bars with reset times, today's tokens, the clock, a warm-up button and a music link"><br><sub>The <code>crew widget</code> on your desktop: every member's bars, today's tokens and a warm-up button.</sub></p>
+
+## How it works
+
+```mermaid
+flowchart LR
+  main["~/.claude<br/>your main setup, read only"]
+  subgraph members["~/.crewrota/members"]
+    a["work<br/>its own login"]
+    b["personal<br/>its own login"]
+  end
+  subgraph ship["~/.crewrota/ships/home"]
+    hist["history: projects,<br/>todos, file history"]
+    mcp["mcp.json"]
+  end
+  main -->|"skills, agents, plugins: linked<br/>settings, CLAUDE.md: copied"| members
+  members <-->|"history linked"| hist
+  mcp -->|"copied at launch"| members
+  members -->|"CLAUDE_CONFIG_DIR"| cc["claude"]
+```
+
+Each member is its own Claude Code config folder with its own login, started with `CLAUDE_CONFIG_DIR` pointing at it.
+Members on one ship link their history folders to it, so a session started on one member resumes on another.
+From your main `~/.claude`, skills, agents and plugins are linked into every member, and settings and `CLAUDE.md` are copied at each launch.
 
 ## Install
 
