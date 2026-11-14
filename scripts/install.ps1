@@ -2,8 +2,8 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 
-$major = [int]((node --version) -replace '^v(\d+).*', '$1')
-if ($major -lt 22) { throw "crewrota needs Node 22 or newer; this machine has $(node --version)." }
+$version = [version]((node --version) -replace '^v', '')
+if ($version -lt [version]'22.19.0') { throw "crewrota needs Node 22.19 or newer; this machine has $(node --version)." }
 
 Push-Location $repo
 try {

@@ -118,7 +118,7 @@ sh scripts/install.sh
 ```
 
 The first is for Windows, the second for macOS and Linux.
-Each checks for Node 22, runs `npm ci`, builds crewrota, packs it the way it would be published, installs that package globally, deletes the packed file and prints `crew --version`.
+Each checks for Node 22.19, runs `npm ci`, builds crewrota, packs it the way it would be published, installs that package globally, deletes the packed file and prints `crew --version`.
 Run it again after pulling changes to update.
 
 ## Add the Claude Code plugin

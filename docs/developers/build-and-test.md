@@ -61,7 +61,7 @@ In a shell that is itself a crew member, also set HOME and the config folders to
 
 ## Install your build
 
-The scripts check Node 22, run `npm ci`, build, `npm pack`, install the tarball globally, delete it and print `crew --version`:
+The scripts check Node 22.19, run `npm ci`, build, `npm pack`, install the tarball globally, delete it and print `crew --version`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1

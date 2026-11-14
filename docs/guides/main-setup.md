@@ -27,7 +27,11 @@ MCP servers come from the member's ship, not from `~/.claude`; see [Give a ship'
 ## Your main setup is read, never written
 
 crewrota only reads `~/.claude` and `~/.claude.json`.
-The one exception is `crew restore`, which adds skills, agents, commands and `CLAUDE.md` to `~/.claude` without overwriting a file.
+There are two exceptions, and both only add:
+
+- `crew restore` adds skills, agents, commands and `CLAUDE.md` to `~/.claude` without overwriting a file.
+- `crew setup` runs the upstream installers you agreed to, which add the default skills to `~/.claude/skills`; with `--with-hooks`, the `gh-axi` and `lavish-axi` commands also add a SessionStart hook to `~/.claude/settings.json`. See [crew setup](../reference/setup-init-doctor.md#crew-setup).
+
 Nothing ever writes to `~/.claude.json`.
 
 So:

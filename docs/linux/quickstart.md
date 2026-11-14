@@ -41,7 +41,7 @@ From source: in the crewrota folder:
 sh scripts/install.sh
 ```
 
-It checks for Node 22, builds crewrota, packs it the way it would be published, and installs that package globally.
+It checks for Node 22.19, builds crewrota, packs it the way it would be published, and installs that package globally.
 
 ## Where crewrota keeps things on Linux
 

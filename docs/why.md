@@ -12,7 +12,7 @@ It keeps each login in its own folder, lets them share history through a ship, a
 ## When it fits
 
 - You have a work login and a login for your own projects, and you switch between them every day.
-- One plan runs out before your work does, and you pay for a second one.
+- You pay for more than one plan and want each one's 5-hour and weekly usage in one place.
 - You want a session started on one login to be picked up on another (members on the same ship share history).
 - You want your skills, agents, plugins and `CLAUDE.md` in every login without copying them by hand.
 - You want to move all of it to a new machine in one zip.

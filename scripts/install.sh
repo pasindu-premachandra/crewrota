@@ -4,7 +4,8 @@ set -eu
 cd "$(dirname "$0")/.."
 
 major=$(node --version | sed 's/^v\([0-9]*\).*/\1/')
-[ "$major" -ge 22 ] || { echo "crewrota needs Node 22 or newer; this machine has $(node --version)." >&2; exit 1; }
+minor=$(node --version | sed 's/^v[0-9]*\.\([0-9]*\).*/\1/')
+[ "$major" -gt 22 ] || { [ "$major" -eq 22 ] && [ "$minor" -ge 19 ]; } || { echo "crewrota needs Node 22.19 or newer; this machine has $(node --version)." >&2; exit 1; }
 
 npm ci
 npm run build

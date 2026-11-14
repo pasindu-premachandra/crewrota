@@ -23,9 +23,9 @@ const installClaude: Record<string, string> = {
 };
 
 const installNode: Record<string, string> = {
-  win32: 'Install Node.js 22 or newer from https://nodejs.org, then open a new terminal.',
-  darwin: 'Install Node.js 22 or newer from https://nodejs.org, then open a new Terminal window.',
-  linux: 'Install Node.js 22 or newer from https://nodejs.org, then open a new shell.',
+  win32: 'Install Node.js 22.19 or newer from https://nodejs.org, then open a new terminal.',
+  darwin: 'Install Node.js 22.19 or newer from https://nodejs.org, then open a new Terminal window.',
+  linux: 'Install Node.js 22.19 or newer from https://nodejs.org, then open a new shell.',
 };
 
 const linkProblems: Record<string, string> = {
@@ -48,8 +48,8 @@ function forThisOs(texts: Record<string, string>): string {
 export function runDoctor(options: { logins?: boolean } = {}, run: Runner = runSync): Check[] {
   const checks: Check[] = [];
 
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  checks.push({ name: 'node', ok: nodeMajor >= 22, detail: `Node ${process.versions.node}`, fix: forThisOs(installNode) });
+  const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+  checks.push({ name: 'node', ok: nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 19), detail: `Node ${process.versions.node}`, fix: forThisOs(installNode) });
 
   const claude = claudeVersion(run);
   checks.push({

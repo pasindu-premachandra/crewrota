@@ -15,7 +15,7 @@ Install it with `npm install -g crewrota`, add a member with `crew add <member>`
 ## Who it is for
 
 crewrota is for one person running their own Claude subscriptions.
-If one plan runs out before your work does, you can keep each login signed in, carry your sessions across them, and see which one has room, without signing out and in again.
+If you keep separate logins, such as one for work and one for your own projects, you can keep each one signed in, carry your sessions across them, and see each one's usage, without signing out and in again.
 Your main `~/.claude` login is never touched: each member has its own folder under `~/.crewrota/members/`.
 
 ## What it does

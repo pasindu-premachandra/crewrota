@@ -1,6 +1,6 @@
 ---
 title: "Use crewrota from an AI agent"
-description: "How Claude Code, Codex, Cursor or any coding agent installs and drives crewrota for you: a setup prompt to paste, the commands it may run on its own, what only you can do, what it must never do, the files to read and two worked sessions."
+description: "How Claude Code or any other coding agent installs and drives crewrota for you: a setup prompt to paste, the commands it may run on its own, what only you can do, what it must never do, the files to read and two worked sessions."
 sidebar:
   order: 0
   label: "Agent guide"
@@ -12,7 +12,7 @@ This page is written for both of you: paste the prompt below into your agent, an
 
 ## The setup prompt
 
-Paste this into Claude Code, Codex, Cursor or another coding agent that can run shell commands:
+Paste this into Claude Code or another coding agent that can run shell commands:
 
 ```text
 Install crewrota for me and check it. crewrota runs Claude Code as one of several

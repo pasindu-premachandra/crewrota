@@ -84,7 +84,7 @@ In a terminal `ok` is green, `miss` amber and `FAIL` red.
 
 | Check | When it fails | Fix |
 |---|---|---|
-| `Node` | Below Node 22 | Install Node.js 22 or newer from https://nodejs.org, then open a new terminal |
+| `Node` | Below Node 22.19 | Install Node.js 22.19 or newer from https://nodejs.org, then open a new terminal |
 | `claude` | `claude was not found` | The Claude Code install command for your platform (below) |
 | `crewrota home` | The crew home cannot be read | Check the folder's permissions |
 | `config` | `config.json` is not valid JSON | Fix the JSON, or rename the file so crewrota starts a fresh one |

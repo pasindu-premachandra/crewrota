@@ -178,7 +178,7 @@ Each line starts with `ok`, `miss` (an optional tool, never a failure) or `FAIL`
 
 | Check | ok when | Fix it points to |
 |---|---|---|
-| Node | the major version is 22 or newer | Install Node.js 22 or newer from nodejs.org |
+| Node | the version is 22.19 or newer | Install Node.js 22.19 or newer from nodejs.org |
 | claude | `claude --version` runs (on Windows also through `cmd.exe` for an npm shim) | Install Claude Code: the PowerShell installer or winget on Windows, the shell installer or Homebrew on macOS, the shell installer on Linux |
 | crewrota home | the folder can be read, or does not exist yet | Check its permissions |
 | config | `config.json` parses, or does not exist yet | Fix the JSON, or rename the file |

@@ -29,9 +29,9 @@
 
 ## Why
 
-One Claude plan can run out before your work does: the 5-hour window closes mid-task, and the weekly cap lands mid-week.
-If you pay for more than one login, switching means signing out, signing in and losing your place.
-crewrota keeps every login signed in, carries your sessions across them and shows which one has room.
+You may have one Claude login for your job and another for your own projects, each its own paid plan.
+Switching between them means signing out, signing in and losing your place.
+crewrota keeps every login signed in, carries your sessions across them and shows each one's usage.
 
 ## What you get
 
